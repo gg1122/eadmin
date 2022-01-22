@@ -14,18 +14,16 @@ class Validate{
 		on('blur', ':text[data-validate], :password[data-validate], textarea[data-validate]', function(){
 			that._check($(this));
 		}).
+		// 单选复选
 		on('click', ':checkbox, :radio', function(){
-			let v = {
-				this : $(this)
-			};
-			v.parent = v.this.closest('.form-group');
-			v.dom = v.parent.find('[name="' + v.this.attr('name') + '"]:first');
+			let [_this, v] = [$(this), {}];
+			v.parent = _this.closest('.form-group');
+			v.dom    = v.parent.find('[name="' + _this.attr('name') + '"]:first');
 			if (v.dom.data('validate') == undefined)
-			{
 				return;
-			}
 			that._check(v.dom);
 		}).
+		// 下拉菜单
 		on('change', 'select[data-validate]', function(){
 			that._check($(this));
 		});
@@ -38,23 +36,15 @@ class Validate{
 	static submit(form){
 		let validate = form.find('[data-validate]');
 		if ( ! validate.length)
-		{
 			return true;
-		}
 		let that = this;
 		validate.each(function(){
-			let v = {
-				this : $(this)
-			};
-			if (v.this.is(':hidden'))
-			{
+			let _this = $(this);
+			if (_this.is(':hidden'))
 				return true;
-			}
-			if (v.this.data('validate-error') != undefined)
-			{
+			if (_this.data('validate-error') != undefined)
 				return true;
-			}
-			that._check(v.this);
+			that._check(_this);
 		});
 	}
 
@@ -62,6 +52,9 @@ class Validate{
 	 * 执行校验
 	 */
 	static _check(dom){
+		let v = {
+			this : dom
+		};
 		// 私有方法 
 		let func = {
 			// 内置验证规则
@@ -76,7 +69,7 @@ class Validate{
 				//邮箱
 				preg['email']   = '[\\w\-\\.]+@[\\w-\\.]+(\\.\\w+)+';
 				//QQ
-				preg['qq']      = '[1-9][\\d]{4,9}';
+				preg['qq']      = '[1-9][\\d]{5,10}';
 				//身份证
 				preg['idcard']  = '(^\\d{15}$)|(^\\d{17}(\\d|X|x)$)';
 				//网址
@@ -84,21 +77,19 @@ class Validate{
 				//日期
 				preg['date']    = '\\d{4}[/-]+\\d{2}[/-]+\\d{2}';
 				//金额
-				preg['money']   = '\\d{1,}\\.\\d{2,4}';
+				preg['money']   = '\\d{1,}\\.\\d{2,4}$';
 				//ip
 				preg['ip']      = '\\d{1,}\\.\\d{1,}\\.\\d{1,}\\.\\d{1,}';
 				//纯数字
-				preg['number']  = '[0-9]+';
+				preg['number']  = '^[\\d]+$';
 				//纯字母
-				preg['letter']  = '[a-zA-Z]+';
+				preg['letter']  = '^[\\w]+$';
 				//数字加字母
-				preg['numberLetter'] = '[0-9a-zA-Z]+';
+				preg['numberLetter'] = '^[0-9a-zA-Z]+$';
 				//邮编
 				preg['zipcode'] = '[1-9][0-9]{5}';
 				if (preg[key] == undefined)
-				{
 					return false;
-				}
 				return preg[key];
 			},
 			// 验证
@@ -112,34 +103,22 @@ class Validate{
 				return true;
 			},
 			// 设置input、textarea高亮状态
-			set : (model) => {
+			set : (success = false) => {
 				if (v.this.is('textarea'))
-				{
-					Form.textarea(v.this, model);
-				}
+					Form.textarea(v.this, success);
 				else
-				{
-					Form.input(v.this, model);
-				}
+					Form.input(v.this, success);
 			},
 			// 通过
 			success : () => {
 				if (v.this.data('validate-error') == undefined)
-				{
 					return;
-				}
 				// 创建表单验证消息容器
 				v.note = this._note(v.this);
 				if (v.this.data('note') == false)
-				{
 					v.note.remove();
-				}
 				else
-				{
-					v.note.
-						removeClass('error').
-						html(v.this.data('note'));
-				}
+					v.note.removeClass('error').html(v.this.data('note'));
 				v.this.removeData('validate-error');
 			},
 			// 失败
@@ -150,13 +129,8 @@ class Validate{
 				v.this.data('validate-error', 1);
 				// 显示提示信息
 				if (v.msg == undefined) return;
-				v.note.
-					addClass('error').
-					html(msg);
+				v.note.addClass('error').html(msg);
 			}
-		};
-		let v = {
-			this : dom
 		};
 		// 验证规则
 		v.rule = v.this.data('validate');
@@ -165,7 +139,7 @@ class Validate{
 		// 下拉菜单
 		if (v.this.is('select'))
 		{
-			if (v.this.val() == module.conf.select_default_val)
+			if (v.this.find(':selected').index() == 0)
 			{
 				func.error(v.msg);
 				return;
@@ -187,7 +161,7 @@ class Validate{
 			return;
 		}
 		// 文本值
-		v.val  = v.this.val();
+		v.val = v.this.val();
 		// 规则验证
 		v.arr = {};
 		// 验证规则数组
@@ -243,12 +217,11 @@ class Validate{
 		// 验证通过
 		if (v.result)
 		{
-			let model = module.conf.validate_success ? 'success' : null;
-			func.set(model);
+			func.set(true);
 			func.success();
 			return;
 		}
-		func.set('error');
+		func.set();
 		func.error(v.arr.msg[v.key]);
 	}
 

@@ -36,7 +36,9 @@ class EChart{
 				show : true,
 				text : '默认图表'
 			},
-			legend : true
+			legend : true,
+			// 自动响应高度宽度
+			responsive : true
 		}
 		// 配置参数
 		this.param = $.extend(true, _param, param);
@@ -62,6 +64,18 @@ class EChart{
 			mode : 'nearest',
 			intersect : true
 		};
+		// 色值
+		this.skin = {
+			fontColor : '#36495C',
+			lineColor : '#DCE8F2'
+		};
+		if (Mount.skin == 'dark')
+		{
+			this.skin = {
+				fontColor : '#FFF',
+				lineColor : '#151935'
+			};
+		}
 		this.run();
 	}
 
@@ -90,24 +104,48 @@ class EChart{
 		let config = {
 			type : 'line',
 			data : {
-				labels : this.param.labels,
+				labels   : this.param.labels,
 				datasets : []
 			},
 			options : {
-				hover : this.hover,
+				hover    : this.hover,
 				tooltips : this.tooltips,
-				title : {
+				title    : {
 					display   : this.param.title.show,
 					fontSize  : 14,
 					text 	  : this.param.title.text,
-					fontColor : '#FFF',
+					fontColor : this.skin.fontColor,
 					padding   : 0
 				},
-				responsive : true,
-				legend : {
-					display : this.param.legend
+				responsive : this.param.responsive,
+				maintainAspectRatio : this.param.responsive,
+				legend     : {
+					display : this.param.legend,
+					labels  : {
+						fontColor : this.skin.fontColor
+					}
 				},
-				layout : this.layout
+				layout : this.layout,
+				scales : {
+					xAxes : [{
+						gridLines : {
+							drawBorder: true,
+							color: this.skin.lineColor
+						},
+						ticks: {
+							fontColor: this.skin.fontColor
+						}
+					}],
+					yAxes : [{
+						gridLines : {
+							drawBorder: true,
+							color: this.skin.lineColor
+						},
+						ticks: {
+							fontColor: this.skin.fontColor
+						}
+					}]
+				}
 			}
 		};
 		if (this.param.labels == undefined || 
@@ -158,13 +196,38 @@ class EChart{
 					display   : this.param.title.show,
 					fontSize  : 14,
 					text 	  : this.param.title.text,
-					fontColor : '#FFF',
+					fontColor : this.skin.fontColor,
 					padding   : 0
 				},
-				responsive : true,
+				responsive : this.param.responsive,
+				maintainAspectRatio : this.param.responsive,
 				legend : {
-					display : this.param.legend
-				}
+					display : this.param.legend,
+					labels  : {
+						fontColor : this.skin.fontColor
+					}
+				},
+				scales : {
+					xAxes : [{
+						gridLines : {
+							drawBorder: true,
+							color: this.skin.lineColor
+						},
+						ticks: {
+							fontColor: this.skin.fontColor
+						}
+					}],
+					yAxes : [{
+						gridLines : {
+							drawBorder: true,
+							color: this.skin.lineColor
+						},
+						ticks: {
+							fontColor: this.skin.fontColor
+						}
+					}]
+				},
+				maintenanceAspectRatio : false
 			}
 		};
 		if (this.param.labels == undefined || 
@@ -223,13 +286,18 @@ class EChart{
 					display   : this.param.title.show,
 					fontSize  : 14,
 					text 	  : this.param.title.text,
-					fontColor : '#FFF',
+					fontColor : this.skin.fontColor,
 					padding   : 0
 				},
-				responsive : true,
+				responsive : this.param.responsive,
+				maintainAspectRatio : this.param.responsive,
 				legend : {
-					display : this.param.legend
-				}
+					display : this.param.legend,
+					labels  : {
+						fontColor : this.skin.fontColor
+					}
+				},
+				maintenanceAspectRatio : false
 			}
 		};
 		if (this.param.labels == undefined || 

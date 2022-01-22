@@ -22,12 +22,10 @@ class Tips{
 		}).
 		// 移出
 		on('mouseleave', dom[0], function(){
-			let v = {
-				this : $(this),
+			let [_this, v] = [$(this), {
 				tips : $('.tips')
-			}
-			v.pt = v.this.data('tips-position');
-			v.pt = v.pt == undefined ? 'top' : v.pt;
+			}];
+			v.pt = _this.data('tips-position') || 'top';
 			switch (v.pt)
 			{
 				case 'top':
@@ -68,8 +66,15 @@ class Tips{
 		}
 		if (v.tips.length == 0)
 		{
-			v.style = param.center == undefined ? '' : ' style="text-align:center;"';
-			v.html  = `<div class="tips animated faster"${v.style}>
+			v.style = param.center != undefined ? ' text-align:center;' : '';
+			let zindex;
+			if (Mount.window != null)
+			{
+				zindex   = $('#' + Mount.window).css('z-index');
+				zindex   = zindex == undefined ? '' : `z-index:${zindex};`;
+				v.style += zindex;
+			}
+			v.html  = `<div style="${v.style}" class="tips animated faster">
 						<div></div>
 						<div class="tips-arrow"></div>
 					</div>`;
@@ -80,16 +85,11 @@ class Tips{
 		v.left   = v.offset.left;
 		v.top    = v.offset.top;
 		// 方位
-		v.pt  = param.position;
-		// 默认在顶部显示
-		v.pt  = v.pt == undefined ? 'top' : v.pt;
+		v.pt  = param.position || 'top';
 		// 文案
 		v.txt = param.tips;
-		if (v.txt == undefined)
-			v.txt = '默认文案';
-		v.tips.
-			children('div:first').
-			html(v.txt);
+		if (v.txt == undefined) v.txt = '默认文案';
+		v.tips.children('div:first').html(v.txt);
 		// 判断空间
 		if (v.pt == 'right' && 
 			distance(dom, 'right') < v.tips.outerWidth() + 30)
@@ -126,22 +126,11 @@ class Tips{
 			attr('class', 'tips animated faster ' + v.class).
 			children('div:last').
 			attr('class', 'tips-arrow ' + v.arrow);
-		// 偏移值
-		v.offset = 0;
-		if (param.offset != undefined)
-			v.offset = param.offset;
 		// 居中偏移
-		if (v.offset == 'middle')
-		{
-			if (v.pt == 'top' || v.pt == 'down')
-			{
-				v.offset = v.tips.outerWidth() / 2 - dom.outerWidth() / 2;
-			}
-			else
-			{
-				v.offset = v.tips.outerHeight() / 2 - dom.outerHeight() / 2;
-			}
-		}
+		if (v.pt == 'top' || v.pt == 'down')
+			v.offset = v.tips.outerWidth() / 2 - dom.outerWidth() / 2;
+		else
+			v.offset = v.tips.outerHeight() / 2 - dom.outerHeight() / 2;
 		switch (v.pt)
 		{
 			case 'top':
@@ -174,19 +163,14 @@ class Tips{
 		let v = {
 			tips : $('.tips')
 		}
-		v.txt = dom.data('tips');
-		v.tips.
-			children('div:first').
-			html(v.txt);
+		v.txt  = dom.data('tips');
+		v.tips.children('div:first').html(v.txt);
 		v.left = _.floor(dom.offset().left);
 		// 处理偏移
-		if (param.offset != undefined)
-		{
-			v.offset = param.offset;
-			if (v.offset == 'middle')
-				v.offset = v.tips.outerWidth() / 2 - dom.outerWidth() / 2;
-			v.left -= v.offset;
-		}
+		v.offset = param.offset;
+		if (v.offset == 'middle')
+			v.offset = v.tips.outerWidth() / 2 - dom.outerWidth() / 2;
+		v.left -= v.offset;
 		v.tips.css({
 			left : v.left
 		});

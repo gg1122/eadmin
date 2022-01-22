@@ -13,7 +13,7 @@
  * 定义全局通用常量、变量
  */
 
-// 禁止选中网页文本标识
+// 禁止选中网页文本标识，用在滑块拖动时避免页面文字被选中使用
 let selectEnabled = true;
 // BODY的JQ缓存
 let body;
@@ -24,10 +24,13 @@ let Method = {};
 // 挂载点
 let Mount  = {
 	dropzone : [],
-	window : null,
-	data   : null,
-	page   : false
+	window   : null,
+	page     : false,
+	skin     : 'dark',
+	timeout  : [],
+	interval : []
 };
+// 全局监听单选、复选、下拉启用禁用，用来响应虚拟UI的显示状态
 Mount.observer = new MutationObserver((m) => {
 	if(m[0].attributeName != 'disabled') return;
 	let dom = m[0].target;
@@ -90,62 +93,80 @@ Mount.observer = new MutationObserver((m) => {
 	}
 })();
 
+// 加载方法
 function load(module)
 {
 	// 框架
-	let _framework = module.framework;
+	let framework = module.framework;
 	// 类库
-	let _lib 	   = module.lib;
+	let lib 	  = module.lib;
 	// 插件
-	let _plugin    = module.plugin;
+	let plugin    = module.plugin;
 	// 数据配置
-	let _data	   = module.data;
+	let data	  = module.data;
 	// 事件
-	let _event     = module.event;
+	let event     = module.event;
 	// 回调
-	let _ready     = module.ready;
+	let ready     = module.ready;
 	// 组装框架文件
-	let _file = [];
-	for (let i in _framework)
+	let file = [];
+	for (let i in framework)
 	{
 		// 框架版本
-		let _version = _framework[i];
+		let version = framework[i];
 		for (let j = 0; j < _fmConf[i].length; j++)
-		_file.push(_ROOTPATH + 'framework/' + i + '/' + _version + '/' + _fmConf[i][j]);
+		file.push(_ROOTPATH + 'js/framework/' + i + '/' + version + '/' + _fmConf[i][j]);
 	}
-	loader.load(_file, function(){
+	loader.load(file, function(){
 		body = $('body');
+		let timer = setTimeout(() => {
+			body.append(`<div id="resource">首次访问加载文件较多，请稍等...</div>`);
+		}, 1000);
 		// 加载数据配置
-		if (_data != undefined && _data.length > 0)
+		if (data != undefined && data.length > 0)
 		{
-			for (let i in _data)
-				loader.load(_ROOTPATH + 'data/' + _data[i]);
+			file = [];
+			for (let i in data)
+				file.push(_ROOTPATH + 'js/data/' + data[i]);
+			loader.load(file);
 		}
 		// 加载类库
-		if (_lib != undefined && _lib.length > 0)
+		if (lib != undefined && lib.length > 0)
 		{
-			for (let i in _lib)
-				loader.load(_ROOTPATH + 'lib/eadmin.' + _lib[i] + '.min.js');
+			file = [];
+			for (let i in lib)
+				file.push(_ROOTPATH + 'js/lib/eadmin.' + lib[i] + '.min.js');
+			loader.load(file);
 		}
 		// 加载插件
-		if (_plugin != undefined)
+		if (plugin != undefined)
 		{
-			for (let i in _plugin)
-				loader.load(_ROOTPATH + 'plugin/' + _plugin[i] + '.min.js');
+			file = [];
+			for (let i in plugin)
+				file.push(_ROOTPATH + 'js/plugin/' + plugin[i] + '.min.js');
+			loader.load(file);
 		}
 		// 最后加载事件，因为事件极有可能需要依赖以上的文件
 		loader.ready(function(){
-			if (_event == undefined || 
-				_event.length == 0)
+			let finish = () => {
+				clearTimeout(timer);
+				$('header').show();
+				$('#container').show();
+				$('#resource').remove();
+			}
+			if (event == undefined || 
+				event.length == 0)
 			{
-				if(_ready != undefined) _ready();
+				finish();
+				if(ready != undefined) ready();
 				return;
 			}
-			var _file = [];
-			for (let i = 0; i < _event.length; i++)
-			_file.push(_ROOTPATH + 'event/' + _event[i]);
-			loader.load(_file, function(){
-				if(_ready != undefined) _ready();
+			file = [];
+			for (let i = 0; i < event.length; i++)
+				file.push(_ROOTPATH + 'js/event/' + event[i]);
+			loader.load(file, function(){
+				finish();
+				if(ready != undefined) ready();
 			});
 		});
 	});

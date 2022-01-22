@@ -214,10 +214,41 @@
                 callback();
             }
         }
+        function isCssLoaded()
+        {
+            if (asset.state !== LOADED && asset.cssRetries <= 20)
+            {
+                for (var i = 0, l = doc.styleSheets.length; i < l; i++)
+                {
+                    if (doc.styleSheets[i].href === ele.href)
+                    {
+                        process({
+                        	"type" : "load"
+                        });
+                        return;
+                    }
+                }
+                asset.cssRetries++;
+                asset.cssTimeout = win.setTimeout(isCssLoaded, 250);
+            }
+        }
         var ele;
-        ele         = doc.createElement("script");
-        ele.type    = "text/" + (asset.type || "javascript");
-        ele.src     = asset.url;
+        var ext = getExtension(asset.url);
+        if (ext === "css")
+        {
+            ele      = doc.createElement("link");
+            ele.type = "text/" + (asset.type || "css");
+            ele.rel  = "stylesheet";
+            ele.href = asset.url;
+            asset.cssRetries = 0;
+            asset.cssTimeout = win.setTimeout(isCssLoaded, 500);         
+        }
+        else
+        {
+            ele      = doc.createElement("script");
+            ele.type = "text/" + (asset.type || "javascript");
+            ele.src = asset.url;
+        }
         ele.onload  = ele.onreadystatechange = process;
         ele.onerror = error;
         ele.async   = false;

@@ -38,27 +38,23 @@ class Tab{
 			console.log('请至少指定1个选项卡');
 			return;
 		}
-		let v = {
-			html : ''
-		};
-		v.html += `<div class="tab">`;
+		let html = `<div class="tab">`;
 		_.each(this.param, (row, key) => {
-			v.html += `<span`;
+			html += `<span`;
 			if (row.active === true)
 			{
-				v.html += ` class="active"`;
+				html += ` class="active"`;
 				this.active = key;
 			}
-			v.html += `>`;
+			html += `>`;
+			if (row.num != undefined && +row.num > 0)
+				html += `<div class="mark">${row.num}</div>`;
 			if (row.icon != undefined)
-			{
-				v.html += `<i class="${row.icon}"></i>`;
-			}
-			v.html += row.name;
-			v.html += `</span>`;
+				html += `<i class="${row.icon}"></i>`;
+			html += row.name + `</span>`;
 		});
-		v.html += `</div>`;
-		this.dom.prepend(v.html);
+		html += `</div>`;
+		this.dom.prepend(html);
 		this.tab = this.dom.children('.tab');
 	}
 
@@ -69,9 +65,7 @@ class Tab{
 	{
 		if (this.active == null)
 			this.active = 0;
-		this.panel.
-			eq(this.active).
-			show();
+		this.panel.eq(this.active).show();
 		// 加载页面
 		this._load();
 	}
@@ -84,16 +78,11 @@ class Tab{
 		let that = this;
 		this.tab.
 		on('click', 'span:not(.active)', function(){
-			let v = {
-				this : $(this)
-			};
-			v.index = v.this.index();
-			addClassExc(v.this, 'active');
+			let [_this, v] = [$(this), {}];
+			v.index = _this.index();
+			addClassExc(_this, 'active');
 			that.active = v.index;
-			that.panel.
-				hide().
-				eq(v.index).
-				show();
+			that.panel.hide().eq(v.index).show();
 			that._load();
 		});
 	}
@@ -113,37 +102,33 @@ class Tab{
 		let id = 'tab-window-' + createId();
 		panel.attr('id', id);
 		Mount.window = id;
-		panel.html(`
-			<div class="panel-loading">
-				<i class="ri-loader-4-line rotate"></i>页面加载中，请稍候...
-			</div>
-		`);
+		panel.html(`<div class="panel-loading">
+						<i class="ri-loader-4-line rotate"></i>页面加载中，请稍候...
+					</div>`);
 		Eadmin.currentHref = load;
-		panel.
-			load(load, () => {
-				// 表单处理
-				Eadmin.form(panel);
-				// 延迟按钮
-				Button.run(panel);
-				// 状态
-				Status.run(panel);
-				// 标签
-				Tag.run(panel);
-				// 进度条
-				Progress.run(panel);
-				// 滚动条处理
-				let scroll = body.find('.iscroll');
-				if(scroll.length > 0)
-				{
-					scroll.
-					each(function(){
-						if ($(this).hasClass('ps')) return true;
-						Eadmin.scroll($(this)[0]);
-					});
-				}
-				// 块
-				block(panel);
-			});
+		panel.load(load, () => {
+			// 缺省图
+			defaultImg(panel);
+			// 块
+			block(panel);
+			// 表单处理
+			Eadmin.form(panel);
+			// 延迟按钮
+			Button.run(panel);
+			// 标签
+			Tag.run(panel);
+			// 滚动条处理
+			let scroll = body.find('.iscroll');
+			if(scroll.length > 0)
+			{
+				scroll.each(function(){
+					if ($(this).hasClass('ps')) return true;
+					Eadmin.scroll($(this)[0]);
+				});
+			}
+			// 进度条
+			Progress.run(panel);
+		});
 	}
 	
 }

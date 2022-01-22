@@ -32,22 +32,32 @@ class Transfer{
 			// 自定义高度
 			height : 0,
 			// 用来取值的表单的name值
-			inputname : 'transfer'
+			bind   : 'transfer'
 		}
 		// 数据源
 		if (_.isString(param.data))
 		{
 			if ( ! _.startsWith(param.data, 'http'))
-			{
 				param.data = module.conf.http.baseURL + param.data;
-			}
 			$.ajax({
 				url      : param.data,
 				type     : 'get',
 				async    : false,
 				dataType : 'json',
 				success  : (data) => {
-					param.data = data;
+					// 没有执行码
+					if (data[module.conf.http.code_field] == undefined)
+					{
+						console.log('接口返回结果中没有找到定义的code码字段');
+						return;
+					}
+					// 没有数据体
+					if (data[module.conf.http.data_field] == undefined)
+					{
+						console.log('接口返回结果中没有找到定义的数据体字段');
+						return;
+					}
+					param.data = data[module.conf.http.data_field];
 				}
 			});
 		}
@@ -94,8 +104,8 @@ class Transfer{
 		for (let i in this.param.data)
 		{
 			let data = this.param.data[i];
-			if (data.checked == undefined || ! 
-				data.checked)
+			if (data.checked == undefined || 
+				! data.checked)
 			{
 				v.from.push(data);
 			}
@@ -119,20 +129,19 @@ class Transfer{
 		// 搜索
 		if (this.param.search)
 		{
-			v.search = ' transfer-body-search';
+			v.search  = ' transfer-body-search';
 			v.height -= 32;
 		}
 		v.html = `<div class="transfer-box-list"${v.style}>
-			<div class="transfer-header">
-				<label>
-					<input type="checkbox" data-num="0"> 源列表
-				</label>
-				<span class="count">
-					<em>0</em> / <em>${v.from.length}</em>
-				</span>
-			</div>
-			<div class="iscroll transfer-body${v.search}" style="height:${v.height}px;">
-				<ul>`;
+					<div class="transfer-header">
+						<label>
+							<input type="checkbox" data-num="0"> 源列表
+						</label>
+						<span class="count">
+							<em>0</em> / <em>${v.from.length}</em>
+						</span>
+					</div>
+					<div class="iscroll transfer-body${v.search}" style="height:${v.height}px;"><ul>`;
 		for (let i in v.from)
 		{
 			let d = (v.from[i].disabled == true) ? ' class="disabled"' : '';
@@ -151,11 +160,11 @@ class Transfer{
 							</label>
 						</div>`;
 		}
-		v.html += `</div><div class="transfer-operation">
-						<button disabled class="highlight" data-num="0">
+		v.html += `</div><div class="transfer-button">
+						<button disabled class="hl" data-num="0">
 							<i class="ri-arrow-left-s-line"></i>
 						</button>
-						<button disabled class="highlight" data-num="1">
+						<button disabled class="hl" data-num="1">
 							<i class="ri-arrow-right-s-line"></i>
 						</button>
 					</div>`;
@@ -167,6 +176,7 @@ class Transfer{
 						<span class="count"><em>0</em> / <em>${v.to.length}</em></span>
 					</div>
 					<div class="iscroll transfer-body${v.search}" style="height:${v.height}px;"><ul>`;
+		v.default = [];
 		for (let i in v.to)
 		{
 			let d = (v.to[i].disabled == true) ? 'disabled' : '';
@@ -175,6 +185,7 @@ class Transfer{
 								<input data-num="1" value="${v.to[i].val}" type="checkbox" ${d}> ${v.to[i].txt}
 							</label>
 						</li>`;
+			v.default.push(v.to[i].val);
 		}
 		v.html += `</ul></div>`;
 		if (this.param.search)
@@ -185,7 +196,7 @@ class Transfer{
 							</label>
 						</div>`;
 		}
-		v.html += `</div><input type="hidden" name="${this.param.inputname}">`;
+		v.html += `</div><input type="hidden" name="${this.param.bind}" value="${_.join(v.default, ',')}">`;
 		this.domCache.html(v.html);
 	}
 
@@ -199,176 +210,122 @@ class Transfer{
 			// 单选
 			'.transfer-body :checkbox',
 			// 左右移动
-			'.transfer-operation button'
+			'.transfer-button button'
 		];
 		let that = this;
-		// 私有变量
-		let v  = {
-			body      : this.domCache.find('.transfer-body'),
-			header    : this.domCache.find('.transfer-header'),
-			operation : this.domCache.find('.transfer-operation')
-		};
+		// 变量
+		let [body, header, button] = [
+			this.domCache.find('.transfer-body'),
+			this.domCache.find('.transfer-header'),
+			this.domCache.find('.transfer-button')
+		];
 		this.domCache.
 		// 全选反选
 		on('click', dom[0], function(){
-			let _v = {
-				this : $(this)
+			let _this = $(this);
+			let v = {
+				eq : +_this.data('num')
 			};
-			_v.eq = parseInt(_v.this.data('num'));
-			_v.checkbox = v.body.
-							eq(_v.eq).
-							find(':checkbox').
-							not(':disabled');
-			if (_v.this.is(':checked'))
+			// 互斥EQ，用来取另一个
+			v.neq = v.eq == 1 ? 0 : 1;
+			v.checkbox = body.eq(v.eq).find(':checkbox').not(':disabled');
+			if (_this.is(':checked'))
 			{
-				Form.checkbox(_v.checkbox, 1);
+				Form.checkbox(v.checkbox, 1);
 				// 总数
-				v.header.
-					eq(_v.eq).
-					find('em:first').
-					html(_v.checkbox.length);
+				header.eq(v.eq).find('em:first').html(v.checkbox.length);
 				// 右移按钮
-				v.operation.
-					children('button').
-					eq(_v.eq == 1 ? 0 : 1).
-					prop('disabled', false);
+				button.children('button').eq(v.neq).prop('disabled', false);
 			}
 			else
 			{
-				Form.checkbox(_v.checkbox, 0);
+				Form.checkbox(v.checkbox, 0);
 				// 总数
-				v.header.
-					eq(_v.eq).
-					find('em:first').
-					html(0);
+				header.eq(v.eq).find('em:first').html(0);
 				// 右移按钮
-				v.operation.
-					children('button').
-					eq(_v.eq == 1 ? 0 : 1).
-					prop('disabled', true);
+				button.children('button').eq(v.neq).prop('disabled', true);
 			}
 		}).
 		// 单选
 		on('click', dom[1], function(){
-			let _v = {
-				this : $(this)
+			let _this = $(this);
+			let v = {
+				eq : +_this.data('num')
 			};
-			_v.eq = parseInt(_v.this.data('num'));
-			_v.checkbox = v.body.eq(_v.eq).find(':checkbox').length;
-			_v.checked  = v.body.eq(_v.eq).find(':checkbox:checked').length;
-			_v.checkall = v.header.eq(_v.eq).find(':checkbox');
+			v.neq = v.eq == 1 ? 0 : 1;
+			v.all      = body.eq(v.eq).find(':checkbox').length;
+			v.checked  = body.eq(v.eq).find(':checked').length;
+			v.checkall = header.eq(v.eq).find(':checkbox');
 			// 总数
-			v.header.
-				eq(_v.eq).
-				find('em:first').
-				html(_v.checked);
+			header.eq(v.eq).find('em:first').html(v.checked);
 			// 全选按钮
-			Form.checkbox(_v.checkall, _v.checked == _v.checkbox ? 1 : 0);
+			Form.checkbox(v.checkall, v.checked == v.all ? 1 : 0);
 			// 移动按钮
-			if (_v.checked == 1)
-			{
-				v.operation.
-					children('button').
-					eq(_v.eq == 1 ? 0 : 1).
-					prop('disabled', false);
-			}
-			else if (_v.checked == 0)
-			{
-				v.operation.
-					children('button').
-					eq(_v.eq == 1 ? 0 : 1).
-					prop('disabled', true);
-			}
+			v.disabled = v.checked > 0 ? false : true;
+			button.children('button').eq(v.neq).prop('disabled', v.disabled);
 		}).
 		// 左右移动
 		on('click', dom[2], function(){
-			let _v = {
-				this : $(this)
+			let _this = $(this);
+			let v = {
+				eq : +_this.data('num')
 			};
-			_v.eq = parseInt(_v.this.data('num'));
-			_v.this.prop('disabled', true);
-			_v.checked = v.body.
-							eq(_v.eq == 1 ? 0 : 1).
-							find(':checkbox:checked').
-							parent().
-							parent();
+			v.neq = v.eq == 1 ? 0 : 1;
+			_this.prop('disabled', true);
+			v.checked = body.eq(v.neq).find(':checkbox:checked').parent().parent();
 			// 选中选项的克隆对象
-			_v.clone = _v.checked.clone();
-			_v.checkbox = _v.clone.find(':checkbox');
+			v.clone    = v.checked.clone();
+			v.checkbox = v.clone.find(':checkbox');
 			// 复位克隆对象复选框
-			_v.checkbox.data('num', _v.eq);
-			Form.checkbox(_v.checkbox, 0);
+			v.checkbox.data('num', v.eq);
+			Form.checkbox(v.checkbox, 0);
 			// 移动
-			v.body.
-				eq(_v.eq).
-				children('ul').
-				prepend(_v.clone);
+			body.eq(v.eq).children('ul').prepend(v.clone);
 			// 删除原始
-			_v.checked.remove();
+			v.checked.remove();
 			// 总数复位
-			v.header.
-				eq(_v.eq == 1 ? 0 : 1).
-				find('em:first').
-				html(0);
-			v.header.
-				eq(_v.eq == 1 ? 0 : 1).
-				find('em:last').
-				html(v.body.eq(_v.eq == 1 ? 0 : 1).find(':checkbox').length);
-			v.header.
-				eq(_v.eq).
-				find('em:last').
-				html(v.body.eq(_v.eq).find(':checkbox').length);
+			header.eq(v.neq).find('em:first').html(0);
+			header.eq(v.neq).find('em:last').html(body.eq(v.neq).find(':checkbox').length);
+			header.eq(v.eq).find('em:last').html(body.eq(v.eq).find(':checkbox').length);
 			// 全选按钮复位
-			_v.checkbox = v.header.
-								eq(_v.eq == 1 ? 0 : 1).
-								find(':checkbox');
-			Form.checkbox(_v.checkbox, 0);
+			v.checkbox = header.eq(v.neq).find(':checkbox');
+			Form.checkbox(v.checkbox, 0);
 			// 赋值
-			v.checkedval = [];
-			v.body.
-				eq(1).
+			v.val = [];
+			body.eq(1).
 				find(':checkbox').
 				each(function(){
-					v.checkedval.push($(this).val());
+					v.val.push($(this).val());
 				});
 			that.domCache.
 				children("input[type='hidden']").
-				val(_.join(v.checkedval, ','));
+				val(_.join(v.val, ','));
 			// 复位搜索结果
 			if(that.param.search)
 			{
-				that.domCache.
-					find('.search-input').
-					eq(_v.eq == 1 ? 0 : 1).
-					val('');
-				v.body.
-					eq(_v.eq == 1 ? 0 : 1).
-					find('li').
-					show();
+				that.domCache.find('.search-input').eq(v.neq).val('');
+				body.eq(v.neq).find('li').show();
 			}
 		});
-		if ( ! that.param.search) return;
+		if ( ! that.param.search) 
+			return;
 		// 搜索
 		keyup(that.domCache.find('.search-input'), (_this) => {
-			let _v = {
-				eq   : parseInt(_this.data('num')),
+			let v = {
+				eq   : +_this.data('num'),
 				val  : _this.val(),
 				body : that.domCache.find('.transfer-body')
 			};
-			if (_v.val == '')
+			if (v.val == '')
 			{
-				_v.body.
-					eq(_v.eq).
-					find('li').
-					show();
+				v.body.eq(v.eq).find('li').show();
 				return;
 			}
-			_v.body.
-				eq(_v.eq).
+			v.body.eq(v.eq).
 				find('li').
 				each(function(){
 					let _this = $(this);
-					if(_this.text().indexOf(_v.val) == -1)
+					if(_this.text().indexOf(v.val) == -1)
 					{
 						_this.hide();
 						return;

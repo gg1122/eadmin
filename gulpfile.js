@@ -27,16 +27,17 @@ gulp.task('dev', [
     gulp.watch([
         'src/js/**/*.js'
     ], ['jsmin']);
-    // 编辑less
-    gulp.watch('src/less/**/*.less', ['less']);
+    // 编译less
+    gulp.watch('src/less/dark/**/*.less', ['less_dark']);
+    gulp.watch('src/less/light/**/*.less', ['less_light']);
     // 合并CSS
-    gulp.watch('src/css/**/*.css', ['css']).on('change', reload);
+    gulp.watch('src/css/dark/**/*.css', ['css_dark']);
+    gulp.watch('src/css/light/**/*.css', ['css_light']);
     // 重载
     gulp.watch([
-        'dist/js/**/*.js',
-        'dist/css/**/*.css',
-        'dist/html/**/*.html',
-        'dist/demo/**/*.html'
+        'dist/**/*.js',
+        'dist/**/*.css',
+        'dist/**/*.html'
     ]).on('change', reload);
 });
 
@@ -63,7 +64,7 @@ gulp.task('jsmin', function(){
         suffix : '.min'
     })).
     pipe(header(note)).
-    pipe(gulp.dest('dist/js/core'));
+    pipe(gulp.dest('dist/static/js/core'));
     // 压缩核心类，函数，初始化文件
     gulp.src([
         'src/js/core/al.conf.js',
@@ -78,19 +79,20 @@ gulp.task('jsmin', function(){
         suffix : '.min'
     })).
     pipe(header(note)).
-    pipe(gulp.dest('dist/js/core'));
+    pipe(gulp.dest('dist/static/js/core'));
     // 压缩类库
     gulp.src([
     	'src/js/lib/*.js'
     ]).
     pipe(plumber()).
 	pipe(babel()).
+    pipe(concat('eadmin.lib.js')).
     pipe(uglify()).
     pipe(rename({
     	suffix : '.min'
     })).
     pipe(header(note)).
-    pipe(gulp.dest('dist/js/lib'));
+    pipe(gulp.dest('dist/static/js/lib'));
     // 压缩框架
     gulp.src([
     	'src/js/framework/eadmin/1.0.1/*.js'
@@ -102,29 +104,50 @@ gulp.task('jsmin', function(){
     	suffix : '.min'
     })).
     pipe(header(note)).
-    pipe(gulp.dest('dist/js/framework/eadmin/1.0.1'));
+    pipe(gulp.dest('dist/static/js/framework/eadmin/1.0.1'));
 });
 
 //编译less
-gulp.task('less', function(){
+gulp.task('less_dark', function(){
 	gulp.src([
-		'src/less/**/*.less',
-		'!src/less/global.less'
+		'src/less/dark/**/*.less',
+		'!src/less/dark/global.less'
 	]).
 	pipe(plumber()).
 	pipe(less()).
-    pipe(gulp.dest('src/css'));
+    pipe(gulp.dest('src/css/dark'));
+});
+gulp.task('less_light', function(){
+	gulp.src([
+		'src/less/light/**/*.less',
+		'!src/less/light/global.less'
+	]).
+	pipe(plumber()).
+	pipe(less()).
+    pipe(gulp.dest('src/css/light'));
 });
 
 //合并css
-gulp.task('css', function(){
-	return gulp.src([
-        'src/css/*.css',
-        'src/css/common/*.css',
-        'src/css/lib/*.css',
+gulp.task('css_dark', function(){
+    return gulp.src([
+        'src/css/dark/*.css',
+        'src/css/dark/common/*.css',
+        'src/css/dark/lib/*.css',
 	]).
     pipe(plumber()).
     pipe(concat('eadmin.min.css')).
     pipe(cssmin()).
-	pipe(gulp.dest('dist/css'));
+	pipe(gulp.dest('dist/static/css'));
+});
+
+gulp.task('css_light', function(){
+    return gulp.src([
+        'src/css/light/*.css',
+        'src/css/light/common/*.css',
+        'src/css/light/lib/*.css',
+	]).
+    pipe(plumber()).
+    pipe(concat('eadmin_light.min.css')).
+    pipe(cssmin()).
+	pipe(gulp.dest('dist/static/css'));
 });

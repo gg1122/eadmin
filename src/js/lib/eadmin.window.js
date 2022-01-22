@@ -23,25 +23,23 @@ class Window{
 		// 默认参数
 		let _param  = {
 			// 链接地址
-			url		: '',
+			url	   : '',
 			// 模式，iframe、load
-			model   : 'load',
+			model  : 'load',
 			// 宽度
-			width   : module.conf.window_width,
+			width  : module.conf.window_width,
 			// 高度
-			height  : module.conf.window_height,
+			height : module.conf.window_height,
 			// 标题
-			title   : module.conf.window_title,
+			title  : module.conf.window_title,
 			// 是否可拖动
-			drag    : true,
+			drag   : true,
 			// 按钮栏
-			btn     : [],
+			btn    : [],
 			// 关闭回调
-			close   : null,
-			// 提交表单回调
-			submit  : null,
+			close  : null,
 			// 弹窗风格，window、popup
-			style   : 'window'
+			style  : 'window'
 		}
 		// 配置参数
 		this.param = $.extend(true, _param, param);
@@ -103,14 +101,15 @@ class Window{
 				v.height = innerH() * (parseInt(this.param.height.replace('%', '')) / 100);
 			}
 		}
+		v.style = `style="width:${v.width}px;height:${v.height}px;`;
 		// 制定样式
 		if (this.param.style == 'popup')
 		{
-			v.style = `style="width:${v.width}px;height:${v.height}px;top:0;right:0;left:unset;border-radius:5px 0 0 5px;"`;
+			v.style += `top:0;right:0;left:unset;border-radius:5px 0 0 5px;"`;
 		}
 		else
 		{
-			v.style = `style="width:${v.width}px;height:${v.height}px;margin-left:-${v.width / 2}px;margin-top:-${v.height / 2}px;"`;
+			v.style += `margin-left:-${v.width / 2}px;margin-top:-${v.height / 2}px;"`;
 		}
 		// 是否可以拖动
 		if (this.param.drag && 
@@ -138,9 +137,13 @@ class Window{
 		{
 			v.html += `<div class="btnbar">`;
 			_.each(this.param.btn, (row) => {
+				if (row.hl == undefined)
+					row.hl = true;
+				if (row.action == undefined)
+					row.action = 'submit';
 				let loading = (['cancel', 'refresh'].indexOf(row.action) == -1) ? ' data-loading="执行中..."' : '';
 				v.html += `<button
-								${_.has(row, 'highlight') ? ' class="highlight"' : ''}
+								${row.hl ? ' class="hl"' : ''}
 								${loading}${row.action == 'submit' ? ' data-submit' : ''}>
 							${row.name}
 							</button>`;
@@ -158,16 +161,30 @@ class Window{
 	 */
 	_event(){
 		let that = this;
-		let v = {};
+		let v    = {};
 		let func = {
-			close : () => {
+			close : (onclose = true) => {
+				// 在表单提交时写到window的data上
+				let change = that.windowDom.data('change');
+				change = change == undefined ? false : true;
+				$('.' + that.window).remove();
+				// 清理窗口内选项卡下页面的元素
+				let tab = that.windowDom.find('.tab-panel');
+				if (tab.length > 0)
+				{
+					tab.each(function(){
+						let _id = $(this).attr('id'); 
+						if (_id == undefined)
+							return true;
+						$('.' + _id).remove();
+					});
+				}
 				that.windowDom.remove();
 				Mount.window = null;
-				$('.' + that.window).remove();
 				Eadmin.maskHide();
 				// 关闭回调
-				if (_.isFunction(that.param.close)) 
-					that.param.close();
+				if (onclose && _.isFunction(that.param.close))
+					that.param.close(change);
 			},
 			load : () => {
 				// 加载内容
@@ -193,21 +210,24 @@ class Window{
 						v.scroll = null;
 					}
 					Mount.window = that.window;
+					// URL参数
+					let get = query(that.param.url);
 					// 加载
 					v.body.
+					before(`<input type="hidden" id="${Mount.window}_query" value='${get}'>`).
 					load(that.param.url, () => {
+						// 缺省图
+						defaultImg(v.body);
 						// 隐藏LOADING
 						v.loading.hide();
+						// 块
+						block(v.body);
 						// 表单处理
 						Eadmin.form(v.body);
 						// 延迟按钮
 						Button.run(that.windowDom);
-						// 状态
-						Status.run(v.body);
 						// 标签
 						Tag.run(v.body);
-						// 进度条
-						Progress.run(v.body);
 						v.scroll = Eadmin.scroll('#' + that.window + ' .body');
 						// 滚动条处理
 						let scroll = body.find('.iscroll');
@@ -219,8 +239,8 @@ class Window{
 								Eadmin.scroll($(this)[0]);
 							});
 						}
-						// 块
-						block(v.body);
+						// 进度条
+						Progress.run(v.body);
 					});
 				}, timeout);
 			},
@@ -258,15 +278,15 @@ class Window{
 				// 加载页面
 				func.load();
 				// 关闭弹窗
-				that.windowDom.
-					children('.window-close').
-					on('click', () => {
-						func.close();
-					});
+				that.windowDom.children('.window-close').on('click', () => {
+					func.close();
+				});
 				// 拖动
 				if (that.param.drag)
 				{
 					v.title.on('mousedown', (event) => {
+						// 禁止选中文本
+						if(selectEnabled) userselect(0);
 						let offset = that.windowDom.offset();
 						that.x     = event.clientX;
 						that.y     = event.clientY;
@@ -287,35 +307,34 @@ class Window{
 								left : left
 							});
 						});
+
 					}).on('mouseup', () => {
+						// 禁止选中文本
+						if(selectEnabled) userselect(1);
 						$(document).off('mousemove');
 					});
 				}
 				// 按钮
 				if (that.param.btn.length == 0) return;
 				// 自定义按钮事件
-				that.windowDom.
-					children('.btnbar').
-					children('button').
-					on('click', function(){
-					let _var = {
-						this : $(this)
-					};
-					_var.index = _var.this.index();
+				that.windowDom.children('.btnbar').children('button').
+				on('click', function(){
+					let [_this, _v] = [$(this), {}];
+					_v.index = _this.index();
 					// 按钮参数
-					_var.param = that.param.btn[_var.index];
+					_v.param = that.param.btn[_v.index];
 					// 内置事件
-					if (_.isString(_var.param.action))
+					if (_.isString(_v.param.action))
 					{
-						_var.action = [
+						_v.action = [
 							'cancel', 'refresh', 'submit'
 						];
-						if (_var.action.indexOf(_var.param.action) == -1)
+						if (_v.action.indexOf(_v.param.action) == -1)
 						{
-							console.log('没有找到内置按钮事件：' + _var.param.action);
+							console.log('没有找到内置按钮事件：' + _v.param.action);
 							return;
 						}
-						switch (_var.param.action)
+						switch (_v.param.action)
 						{
 							// 取消
 							case 'cancel':
@@ -329,86 +348,56 @@ class Window{
 							// 提交表单
 							case 'submit':
 								let _func = () => {
-									v.form = v.body.find(_var.param.formid == undefined ? 'form' : _var.param.formid);
+									v.form = v.body.find(_v.param.formid || 'form');
 									if (v.form.length == 0)
 									{
 										console.log('窗体内没有找到form表单元素，提交表单失败');
 										return;
 									}
-									v.action = v.form.attr('action');
-									if (v.action == undefined)
-									{
-										v.action = that.param.url;
-									}
+									v.action = v.form.attr('action') || that.param.url;
 									// 验证提交表单
 									Validate.submit(v.form);
-									if(v.form.find('span.error').length > 0)
-									{
+									if(v.form.find('span.error').length > 0) 
 										return;
-									}
-									Eadmin.button.loading(_var.this);
+									Eadmin.button.loading(_this);
 									// 提交数据
 									v.formData = v.form.serialize();
 									// 调用接口
-									axios.post(v.action, v.formData).
-									then((response) => {
-										let data = response.data;
-										// 没有执行成功码则还是调用submit回调
-										if (data[module.conf.http.code_field] == undefined)
-										{
-											console.log('接口返回结果中没有找到定义的code码字段');
-											return;
-										}
-										let msg = '';
-										if (data[module.conf.http.msg_field] != undefined)
-											msg = data[module.conf.http.msg_field];
-										// 执行成功
-										if (data[module.conf.http.code_field] == module.conf.http.code_success)
-										{
-											msg = msg == '' ? '操作执行成功' : msg;
+									Eadmin.post({
+										url  : v.action,
+										form : v.formData,
+										then : (data) => {
 											// 清除编辑器的本地缓存
 											let editor = v.form.find('.editor');
 											if (editor.length > 0)
 											{
-												let storeKey = editor.data('store');
-												if (storeKey != undefined)
-													store.remove(storeKey);
+												editor.each(function(){
+													let storeKey = $(this).data('store');
+													if (storeKey != undefined)
+														store.remove(storeKey);
+												});
 											}
-											// 加false参数表示不需要再调用窗口关闭的回调
+											if (_.isFunction(that.param.close)) 
+												that.param.close(true, data);
+										},
+										error : () => {
+											Eadmin.button.reset(_this);
+										},
+										close : () => {
 											func.close(false);
-											// 提示
-											Eadmin.popup.success({
-												content : msg,
-												callback : () => {
-													if (_var.param.refresh_on_close === true)
-														Eadmin.refresh();
-												}
-											});
-											Eadmin.button.reset(_var.this);
-											return;
 										}
-										if (msg == '') msg = '操作执行失败';
-										Eadmin.message.error({
-											content : msg
-										});
-										Eadmin.button.reset(_var.this);
-									}).
-									catch((error) => {
-										Eadmin.message.error({
-											content : error
-										});
-										Eadmin.button.reset(_var.this);
 									});
 								}
-								if (_var.param.before != undefined)
+								// 表单提交前置动作
+								if (_v.param.before != undefined)
 								{
 									if (Method == undefined || 
-										Method[_var.param.before] == undefined)
+										Method[_v.param.before] == undefined)
 									{
-										console.log('弹窗页面中没有找到指定的前置方法' + _var.param.before);
+										console.log('弹窗页面中没有找到指定的前置方法' + _v.param.before);
 										return false;
 									}
-									Method[_var.param.before](_func);
+									Method[_v.param.before](_func);
 									return;
 								}
 								_func();
@@ -417,23 +406,23 @@ class Window{
 					}
 					else
 					{
-						let _btnReset = () => {
+						let reset = () => {
 							setTimeout(() => {
-								Eadmin.button.reset(_var.this);
+								Eadmin.button.reset(_this);
 							}, 100);
 						};
-						_var.param.action({
-							close : () => {
-								_btnReset();
+						_v.param.action({
+							window : that.windowDom,
+							close  : () => {
 								func.close();
 							},
 							refresh : () => {
-								_btnReset();
+								reset();
 								v.body.empty();
 								func.load();
 							},
-							btnReset : () => {
-								_btnReset();
+							reset : () => {
+								reset();
 							}
 						});
 					}

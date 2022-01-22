@@ -75,10 +75,17 @@ class Datepikcer{
 	 * 创建结构
 	 */
 	_create(){
-		let _dom = createId();
+		let [dom, zindex] = [
+			createId(), ''
+		];
+		if (Mount.window != null)
+		{
+			zindex = $('#' + Mount.window).css('z-index');
+			zindex = zindex == undefined ? '' : `style="z-index:${zindex};"`;
+		}
 		// 组装HTML结构
-		let _html = `<div id="datepicker-${_dom}" class="datepicker animated faster${(Mount.window) == null ? '' : ' ' + Mount.window}">`;
-		_html += `<div class="quick">
+		let html = `<div id="datepicker-${dom}" ${zindex} class="datepicker animated faster${(Mount.window) == null ? '' : ' ' + Mount.window}">`;
+		html += `<div class="quick">
 			<span class="title">快捷选择</span>
 			<span>3天内</span>
 			<span>一周内</span>
@@ -105,13 +112,13 @@ class Datepikcer{
 			<span class="next-month">
 				<i class="ri-arrow-drop-right-line"></i>
 			</span>`;
-		_html += `</div>
+		html += `</div>
 			<div class="body">
 				<div class="week">
 					${this._week()}
 				</div>
 				<div class="day"></div>`;
-		_html += `<div class="y-m">
+		html += `<div class="y-m">
 			${this._year()}
 		</div>
 		<div class="y-m">
@@ -119,12 +126,12 @@ class Datepikcer{
 		</div>`;
 		if(this.param.format.indexOf(' ') != -1)
 		{
-			_html += `<div class="picker-time">
+			html += `<div class="picker-time">
 						${this._time()}
 					</div>`;
 		}
-		_html += `</div></div>`;
-		_html += `<div class="datepicker-panel right" data-index="1">
+		html += `</div></div>`;
+		html += `<div class="datepicker-panel right" data-index="1">
 		<div class="header">
 			<span class="prev-year">
 				<i class="ri-arrow-left-s-line"></i>
@@ -148,7 +155,7 @@ class Datepikcer{
 				${this._week()}
 			</div>
 			<div class="day"></div>`;
-		_html += `<div class="y-m">
+		html += `<div class="y-m">
 			${this._year(parseInt(this.arr[0].m) + 1)}
 		</div>
 		<div class="y-m">
@@ -156,25 +163,25 @@ class Datepikcer{
 		</div>`;
 		if(this.param.format.indexOf(' ') != -1)
 		{
-			_html += `<div class="picker-time">
+			html += `<div class="picker-time">
 						${this._time()}
 					</div>`;
 		}
-		_html += `</div></div>`;
-		_html += `<div class="clear"></div>`;
-		_html += `<div class="footer">
+		html += `</div></div>`;
+		html += `<div class="clear"></div>`;
+		html += `<div class="footer">
 			<span class="font choose-time">
 				选择时间
 			</span>
 			<span class="confirm">
 				<button class="clear small">清空</button>
-				<button class="highlight small sure">确定</button>
+				<button class="hl small sure">确定</button>
 			</span>
 		</div>`;
-		_html += `</div>`;
-		body.append(_html);
+		html += `</div>`;
+		body.append(html);
 		// 缓存DOM
-		this.picker = $('#datepicker-' + _dom);
+		this.picker = $('#datepicker-' + dom);
 	}
 
 	/**
@@ -191,32 +198,27 @@ class Datepikcer{
 		// 默认值
 		if (this.param.default.length > 0)
 		{
-			let trueVal = _.join(this.param.default, ',');
 			let format = '';
-			if (_.isNumber(this.param.default[0]) && 
-				(this.param.default[0] + '').length == 10)
+			format = _.replace(this.param.format, 'Y', '%y');
+			format = _.replace(format, 'm', '%M');
+			format = _.replace(format, 'd', '%d');
+			if (this.time)
 			{
-				format = _.replace(this.param.format, 'Y', '%y');
-				format = _.replace(format, 'm', '%M');
-				format = _.replace(format, 'd', '%d');
-				if (this.time)
-				{
-					format = _.replace(format, 'H', '%h');
-					format = _.replace(format, 'i', '%m');
-					format = _.replace(format, 's', '%s');
-				}
+				format = _.replace(format, 'H', '%h');
+				format = _.replace(format, 'i', '%m');
+				format = _.replace(format, 's', '%s');
 			}
+			if (this.param.unixtime)
+				this.inputDom.data('default-date', _.join(this.param.default, ','));
 			for (let i in this.param.default)
 			{
-				let _v = this.param.default[i];
 				if (format == '')
 					continue;
-				this.param.default[i] = Time(_v, format);
+				this.param.default[i] = Time(this.param.default[i], format);
 			}
-			let showVal = _.join(this.param.default, ' - ');
-			this.inputDom.
-				val(showVal).
-				data('default-date', trueVal);
+			if ( ! this.param.unixtime)
+				this.inputDom.data('default-date', _.join(this.param.default, ','));
+			this.inputDom.val(_.join(this.param.default, ' - '));
 		}
 		// 局部变量统一定义
 		let v = {
@@ -230,16 +232,10 @@ class Datepikcer{
 		// 私有方法
 		let func = {
 			setYear : (dom = v.header, y = this.arr[0].y) => {
-				dom.
-					find('.year').
-					data('y', y).
-					html(y + '年');
+				dom.find('.year').data('y', y).html(y + '年');
 			},
 			setMonth : (dom = v.header, m = this.arr[0].m) => {
-				dom.
-					find('.month').
-					data('m', m).
-					html(m + '月');
+				dom.find('.month').data('m', m).html(m + '月');
 			}
 		};
 		// 年份显示
@@ -268,9 +264,7 @@ class Datepikcer{
 		}
 		// 显示底部工具栏
 		if (this.param.confirm)
-			this.picker.
-				find('.footer').
-				show();
+			this.picker.find('.footer').show();
 		// 如果不需要时分秒则返回
 		if ( ! this.time)
 			return;
@@ -288,26 +282,16 @@ class Datepikcer{
 		// 时分秒默认值赋值
 		if (v.val != '')
 		{
-			v.picker.
-				find('.h' + this.h).
-				addClass('current');
-			v.picker.
-				find('.i' + this.i).
-				addClass('current');
-			v.picker.
-				find('.s' + this.s).
-				addClass('current');
+			v.picker.find('.h' + this.h).addClass('current');
+			v.picker.find('.i' + this.i).addClass('current');
+			v.picker.find('.s' + this.s).addClass('current');
 		}
 		// 如果不需要秒数则移除选择秒的那一栏
 		if (v.arr.length == 2)
 		{
-			v.picker.
-				find('.picker-time ul:last').
-				remove();
+			v.picker.find('.picker-time ul:last').remove();
 			if (this.param.type == 'date-range')
-			v.range.
-				find('.picker-time ul:last').
-				remove();
+				v.range.find('.picker-time ul:last').remove();
 		}
 	}
 
@@ -372,44 +356,28 @@ class Datepikcer{
 		v.m = v.ym.eq(0).children('.month');
 		if (v.y.data('y') != this.arr[0].y)
 		{
-			v.y.
-				html(this.arr[0].y + '年').
-				data('y', this.arr[0].y);
+			v.y.html(this.arr[0].y + '年').data('y', this.arr[0].y);
 		}
 		if (v.m.data('m') != this.arr[0].m)
 		{
-			v.m.
-				html(this.arr[0].m + '月').
-				data('m', this.arr[0].m);
+			v.m.html(this.arr[0].m + '月').data('m', this.arr[0].m);
 		}
 		if (v.y != this.arr[0].y || 
 			v.m != this.arr[0].m)
 		{
-			v.day.eq(0).
-				html(this._createYmdHtml(this.arr[0].y, this.arr[0].m));
+			v.day.eq(0).html(this._createYmdHtml(this.arr[0].y, this.arr[0].m));
 		}
 		if (this.param.type == 'date-range')
 		{
 			v.y = v.ym.eq(1).children('.year');
 			v.m = v.ym.eq(1).children('.month');
 			if (v.y.data('y') != this.arr[1].y)
-			{
-				v.y.
-					html(this.arr[1].y + '年').
-					data('y', this.arr[1].y);
-			}
+				v.y.html(this.arr[1].y + '年').data('y', this.arr[1].y);
 			if (v.m.data('m') != this.arr[1].m)
-			{
-				v.m.
-					html(this.arr[1].m + '月').
-					data('m', this.arr[1].m);
-			}
+				v.m.html(this.arr[1].m + '月').data('m', this.arr[1].m);
 			if (v.y != this.arr[1].y || 
 				v.m != this.arr[1].m)
-			{
-				v.day.eq(1).
-					html(this._createYmdHtml(this.arr[1].y, this.arr[1].m));
-			}
+				v.day.eq(1).html(this._createYmdHtml(this.arr[1].y, this.arr[1].m));
 		}
 	}
 	
@@ -421,7 +389,7 @@ class Datepikcer{
 	_createYmdHtml(y = '', m = ''){
 		let realM = parseInt(m) - 1;
 		// 定义私有变量
-		let _var = {
+		let v = {
 			// 获取当月第一天是星期几
 			firstWeekDay : new Date(y, realM, 1).getDay(),
 			// 获取当月天数
@@ -437,78 +405,75 @@ class Datepikcer{
 			// 结构
 			html		 : ''
 		};
-		_var.firstWeekDay += 1;
+		v.firstWeekDay += 1;
 		// 循环天数
-		for(let _i = 1; _i < 43; _i++)
+		for(let i = 1; i < 43; i++)
 		{
-			// 今天的特殊结构
-			let _current = '';
-			// 样式，用于控制不能选中的日期
-			let _class   = '';
-			// 循环内当天日期，只有有效的日期才会赋值
-			let _today   = 0;
+			let [current, _class, today] = [
+				'', '', 0
+			];
 			// 如果i小于第一天的天数则用上个月的天数补足
-			if (_i < _var.firstWeekDay)
+			if (i < v.firstWeekDay)
 			{
-				_var.realDay  = _var.prevMonthDay - (_var.firstWeekDay - _i);
-				_var.realDay += 1;
+				v.realDay  = v.prevMonthDay - (v.firstWeekDay - i);
+				v.realDay += 1;
 				_class = ' class="next"';
 			}
-			else if (_i - _var.firstWeekDay >= _var.monthDay)
+			else if (i - v.firstWeekDay >= v.monthDay)
 			{
-				if (_i - _var.firstWeekDay == _var.monthDay) 
-					_var.realDay = 1;
+				if (i - v.firstWeekDay == v.monthDay) 
+					v.realDay = 1;
 				_class = ' class="next"';
 			}
 			else
 			{
 				// 当天日期
-				_today = parseInt(y + '' + m + '' + repairZero(_i - _var.firstWeekDay + 1));
-				if (_today == this.today)
-					_current = '<div></div>';
+				today = parseInt(y + '' + m + '' + repairZero(i - v.firstWeekDay + 1));
+				if (today == this.today)
+					current = '<div></div>';
 				if (this.param.type == 'date')
 				{
-					if (_today == this.arr[this.index].c)
+					if (today == this.arr[this.index].c)
 						_class = ' class="current"';
 				}
 				else
 				{
 					if (this.arr[this.index].index == this.index && 
-						this.arr[this.index].c == _today)
+						this.arr[this.index].c == today)
 					{
 						_class = ' class="current"';
 					}
-					let _index = this.index == 1 ? 0 : 1;
-					if (this.arr[_index].index == this.index && 
-						this.arr[_index].c == _today)
+					let index = this.index == 1 ? 0 : 1;
+					if (this.arr[index].index == this.index && 
+						this.arr[index].c == today)
 					{
 						_class = ' class="current"';
 					}
 				}
-				if (_i == _var.firstWeekDay)
-					_var.realDay = 1;
+				if (i == v.firstWeekDay)
+					v.realDay = 1;
 			}
 			// 判断开始结束日期
-			if ((_var.start > 0 || _var.end > 0) && 
+			if ((v.start > 0 || v.end > 0) && 
 				_class != ' class="next"')
 			{
-				if (_var.start > 0)
+				if (v.start > 0)
 				{
-					if (_today < _var.start)
+					if (today < v.start)
 						_class = ' class="next"';
 				}
-				if (_var.end > 0)
+				if (v.end > 0)
 				{
-					if (_today > _var.end)
+					if (today > v.end)
 						_class = ' class="next"';
 				}
 			}
-			_var.html += `<span${_class} data-day="${_today}" data-y="${y}" data-m="${m}" data-d="${_var.realDay}">
-							${_current}${_var.realDay}
+			v.html += `<span${_class} data-day="${today}" data-y="${y}" data-m="${m}" data-d="${v.realDay}">
+							${current}${v.realDay}
 						</span>`;
-			_var.realDay++;
+			v.realDay++;
 		}
-		return _var.html;
+		return v.html;
 	}
 
 	/**
@@ -519,92 +484,92 @@ class Datepikcer{
 	_getMonthDay(y = '', m = ''){
 		m = (m < 0) ? 11 : m;
 		// 判断当前年是不是闰年
-		let _Feb = (y % 4 == 0 && 
+		let Feb = (y % 4 == 0 && 
 					y % 100 != 0 || 
 					y % 400 == 0) ? 29 : 28,
-			_arr = new Array();
-		_arr[0]  = 31;
-		_arr[1]  = _Feb;
-		_arr[2]  = 31;
-		_arr[3]  = 30;
-		_arr[4]  = 31;
-		_arr[5]  = 30;
-		_arr[6]  = 31;
-		_arr[7]  = 31;
-		_arr[8]  = 30;
-		_arr[9]  = 31;
-		_arr[10] = 30;
-		_arr[11] = 31;
-		return _arr[m];
+			arr = new Array();
+		arr[0]  = 31;
+		arr[1]  = Feb;
+		arr[2]  = 31;
+		arr[3]  = 30;
+		arr[4]  = 31;
+		arr[5]  = 30;
+		arr[6]  = 31;
+		arr[7]  = 31;
+		arr[8]  = 30;
+		arr[9]  = 31;
+		arr[10] = 30;
+		arr[11] = 31;
+		return arr[m];
 	}
 
 	/**
 	 * 星期
 	 */
 	_week(){
-		let _html = '',
-			_week = [
+		let html = '',
+			week = [
 				'日', '一', '二', '三', '四', '五', '六'
 			];
-		for (let _i in _week)
-			_html += `<span>${_week[_i]}</span>`;
-		return _html;
+		for (let i in week)
+			html += `<span>${week[i]}</span>`;
+		return html;
 	}
 	
 	/**
 	 * 年份
 	 */
 	_year(m = ''){
-		let _y = parseInt(this.arr[0].y);
-		if (m === 12) _y += 1;
-		let _html = '';
-		for (let _i = _y + 1; _i > (parseInt(this.arr[0].y) - 11); _i--)
+		let y = parseInt(this.arr[0].y);
+		if (m === 12) y += 1;
+		let html = '';
+		for (let i = y + 1; i > (parseInt(this.arr[0].y) - 11); i--)
 		{
-			let _active = (_y == _i) ? ' active' : '';
-			_html += `<div class="year${_active}" data-y="${_i}">${_i}</div>`;
+			let active = (y == i) ? ' active' : '';
+			html += `<div class="year${active}" data-y="${i}">${i}</div>`;
 		}
-		return _html;
+		return html;
 	}
 
 	/**
 	 * 月份
 	 */
 	_month(m = ''){
-		let _m = (m == '') ? parseInt(this.arr[0].m) : m;
+		let _m = (m == '') ? +this.arr[0].m : m;
 		if (_m > 12) _m = 1;
-		let _html = '';
-		for (let _i = 1; _i < 13; _i++)
+		let html = '';
+		for (let i = 1; i < 13; i++)
 		{
-			let _active = (_m == _i) ? ' active' : '';
-			_html += `<div class="month${_active}" data-m="${_i}">${_i}月</div>`;
+			let active = (_m == i) ? ' active' : '';
+			html += `<div class="month${active}" data-m="${i}">${i}月</div>`;
 		}
-		return _html;
+		return html;
 	}
 
 	/**
 	 * 时间
 	 */
 	_time(){
-		let _html = '<ul class="iscroll">';
-		for (let _i = 0; _i < 24; _i++)
+		let html = '<ul class="iscroll">';
+		for (let i = 0; i < 24; i++)
 		{
-			_i = repairZero(_i);
-			_html += '<li class="h'+_i+' h">' + _i + '</li>';
+			i = repairZero(i);
+			html += '<li class="h' + i + ' h">' + i + '</li>';
 		}
-		_html += '</ul><ul class="i iscroll">';
-		for (let _i = 0; _i < 60; _i++)
+		html += '</ul><ul class="i iscroll">';
+		for (let i = 0; i < 60; i++)
 		{
-			_i = repairZero(_i);
-			_html += '<li class="i'+_i+' i">' + _i + '</li>';
+			i = repairZero(i);
+			html += '<li class="i' + i + ' i">' + i + '</li>';
 		}
-		_html += '</ul><ul class="s iscroll">';
-		for (let _i = 0; _i < 60; _i++)
+		html += '</ul><ul class="s iscroll">';
+		for (let i = 0; i < 60; i++)
 		{
-			_i = repairZero(_i);
-			_html += '<li class="s'+_i+' s">' + _i + '</li>';
+			i = repairZero(i);
+			html += '<li class="s' + i + ' s">' + i + '</li>';
 		}
-		_html += '</ul>';
-		return _html;
+		html += '</ul>';
+		return html;
 	}
 
 	/**
@@ -612,7 +577,7 @@ class Datepikcer{
 	 */
 	_event(){
 		// 定义需要响应事件的DOM
-		let _dom = [
+		let dom = [
 			// 上下年、上下月
 			'.prev-year, .prev-month, .next-year, .next-month',
 			// 年面板、月面板
@@ -632,253 +597,206 @@ class Datepikcer{
 			// 快捷选择
 			'.quick span'
 		];
-		let _that = this;
+		let that = this;
 		// 开始监听事件
-		_that.inputDom.
+		that.inputDom.
 		// 显示日期面板
 		on('focus', function(){
-			let v = {
-				this : $(this)
-			};
-			fadeIn(_that.picker, v.this, false);
-			_that.focusInput = v.this;
+			let _this = $(this);
+			fadeIn(that.picker, _this, false);
+			that.focusInput = _this;
 			clear = true;
 		}).
 		// 隐藏日期面板
 		on('blur', function(){
-			fadeOut(_that.picker);
-			_that.focusInput = null;
+			fadeOut(that.picker);
+			that.focusInput = null;
 			clear = false;
+			let _this = $(this);
+			if (_this.val() != '')
+				return;
+			if (_this.next('input').length == 0)
+				return;
+			_this.next('input').val('');
 		});
 		this.picker.
 		// 收起面板
 		on('blur', function(){
-			_that.focusInput.blur();
-			_that.focusInput = null;
-			fadeOut(_that.picker);
+			that.focusInput.blur();
+			that.focusInput = null;
+			fadeOut(that.picker);
 			clear = false;
 		}).
 		// 日历索引
 		on('mouseenter', '>.datepicker-panel', function(){
-			_that.index = $(this).data('index');
+			that.index = $(this).data('index');
 		}).
 		// 上年、上月、下年、下月
-		on('click', _dom[0], function(){
+		on('click', dom[0], function(){
 			let _this = $(this);
 			// 定义私有变量
-			let _var = {
+			let v = {
 				body : _this.parent().next('.body'),
 				ym   : _this.siblings('.show-ym')
 			};
-			_var.y = _var.ym.children('.year').data('y');
-			_var.m = parseInt(_var.ym.children('.month').data('m'));
+			v.y = v.ym.children('.year').data('y');
+			v.m = parseInt(v.ym.children('.month').data('m'));
 			// 私有方法
-			let _func = {
+			let func = {
 				// 设置选中的年
 				setYear : () => {
-					_var.ym.
-						children('.year').
-						data('y', _var.y).
-						html(_var.y + '年');
+					v.ym.children('.year').data('y', v.y).html(v.y + '年');
 				}
 			};
 			// 上一年
 			if(_this.hasClass('prev-year'))
 			{
-				_var.y -= 1;
-				_func.setYear();
+				v.y -= 1;
+				func.setYear();
 			}
 			// 上一月
 			else if (_this.hasClass('prev-month'))
 			{
-				_var.m -= 1;
-				if (_var.m == 0)
+				v.m -= 1;
+				if (v.m == 0)
 				{
-					_var.y -=1;
-					_var.m = 12;
-					_func.setYear();
+					v.y -=1;
+					v.m = 12;
+					func.setYear();
 				}
-				_var.ym.
-					children('.month').
-					html(repairZero(_var.m) + '月').
-					data('m', _var.m);
+				v.ym.children('.month').html(repairZero(v.m) + '月').data('m', v.m);
 			}
 			// 下一年
-			else if ($(this).hasClass('next-year'))
+			else if (_this.hasClass('next-year'))
 			{
-				_var.y += 1;
-				_func.setYear();
+				v.y += 1;
+				func.setYear();
 			}
 			// 下一月
 			else
 			{
-				_var.m += 1;
-				if (_var.m == 13)
+				v.m += 1;
+				if (v.m == 13)
 				{
-					_var.y += 1;
-					_var.m = 1;
-					_func.setYear();
+					v.y += 1;
+					v.m = 1;
+					func.setYear();
 				}
-				_var.ym.
-					children('.month').
-					html(repairZero(_var.m) + '月').
-					data('m', _var.m);
+				v.ym.children('.month').html(repairZero(v.m) + '月').data('m', v.m);
 			}
-			_var.body.
-				children('.day').
-				html(_that._createYmdHtml(_var.y, repairZero(_var.m)));
+			v.body.children('.day').html(that._createYmdHtml(v.y, repairZero(v.m)));
 		}).
 		// 切换到年、月面板
-		on('click', _dom[1], function(){
+		on('click', dom[1], function(){
 			let _this = $(this);
-			_this.
-				parent().
-				children('.month').
-				hide();
-			let _body = _this.
-							parent().
-							parent().
-							next('.body');
-			_body.
-				children('div').
-				hide();
-			let _index = $(this).hasClass('year') ? 2 : 3;
-			_body.
-				children().
-				eq(_index).
-				css('display', 'flex');
+			_this.parent().children('.month').hide();
+			let body = _this.parent().parent().next('.body');
+			body.children('div').hide();
+			let index = $(this).hasClass('year') ? 2 : 3;
+			body.children().eq(index).css('display', 'flex');
 		}).
 		// 选择具体的年、月
-		on('click', _dom[2], function(){
+		on('click', dom[2], function(){
 			let _this = $(this),
-				_body = _this.parent().parent(),
-				_head = _body.prev();
+				body  = _this.parent().parent(),
+				head  = body.prev();
 			// 选择年
 			if (_this.hasClass('year'))
 			{
-				let _y = _this.data('y');
-				_head.
-					find('.year').
-					html(_y + '年').
-					data('y', _y);
-				_this.
-					parent().
-					hide().
-					next().
-					css('display', 'flex');
+				let y = _this.data('y');
+				head.find('.year').html(y + '年').data('y', y);
+				_this.parent().hide().next().css('display', 'flex');
 			}
 			// 选择月
 			else
 			{
-				let _y = _head.find('.year').data('y');
-				let _m = _this.data('m');
-				_this.
-					parent().
-					hide().
-					siblings('.week, .day').
-					css('display', 'flex');
-				_head.
-					find('.month').
-					html(repairZero(_m) + '月').
-					data('m', _m).
-					show();
-				_body.
-					children('.day').
-					html(_that._createYmdHtml(_y, repairZero(_m)));
+				let y = head.find('.year').data('y');
+				let m = _this.data('m');
+				_this.parent().hide().siblings('.week, .day').css('display', 'flex');
+				head.find('.month').html(repairZero(m) + '月').data('m', m).show();
+				body.children('.day').html(that._createYmdHtml(y, repairZero(m)));
 			}
-			_this.
-				addClass('active').
-				siblings().
-				removeClass('active');
+			addClassExc(_this, 'active');
 		}).
 		// 选择日期
-		on('click', _dom[3], function(){
+		on('click', dom[3], function(){
 			let _this = $(this);
 			// 不可点直接返回
 			if (_this.hasClass('next')) return;
 			// 双日历操作
-			if (_that.param.type == 'date-range')
+			if (that.param.type == 'date-range')
 			{
-				let _index = _that.index;
-				_that.arr[_index].y = _this.data('y');
-				_that.arr[_index].m = _this.data('m');
-				_that.arr[_index].index = _that.index;
-				_that.currentNum += 1;
-				if (_that.currentNum == 3)
+				let index = that.index;
+				that.arr[index].y 	  = _this.data('y');
+				that.arr[index].m 	  = _this.data('m');
+				that.arr[index].index = that.index;
+				that.currentNum += 1;
+				if (that.currentNum == 3)
 				{
-					_that.picker.
-						find('.current').
-						removeClass('current');
-					_that.currentNum = 1;
-					_that.pindex = null;
+					that.picker.find('.current').removeClass('current');
+					that.currentNum = 1;
+					that.pindex = null;
 				}
 				_this.addClass('current');
-				if (_that.pindex == null)
+				if (that.pindex == null)
 				{
-					_that.pindex = _index;
+					that.pindex = index;
 				}
 				else
 				{
 					// 两次选择的日期在同一个日历上则需要处理
-					if (_index == _that.pindex)
+					if (index == that.pindex)
 					{
-						_index = (_that.pindex == 0) ? 1 : 0;
-						_that.arr[_index].y = _that.arr[_that.pindex].y;
-						_that.arr[_index].m = _that.arr[_that.pindex].m;
-						_that.arr[_index].index = _that.index;
+						index = (that.pindex == 0) ? 1 : 0;
+						that.arr[index].y 	  = that.arr[that.pindex].y;
+						that.arr[index].m 	  = that.arr[that.pindex].m;
+						that.arr[index].index = that.index;
 					}
 				}
 				// 赋值当日日期
-				_that.arr[_index].d = repairZero(_this.data('d'));
+				that.arr[index].d = repairZero(_this.data('d'));
 				// 选中的日期
-				_that.arr[_index].c = parseInt(_this.data('day'));
-				if (_that.currentNum == 1 || _that.currentNum == 3) return;
+				that.arr[index].c = parseInt(_this.data('day'));
+				if (that.currentNum == 1 || that.currentNum == 3) return;
 			}
 			else
 			{
-				_that.arr[0].y = _this.data('y');
-				_that.arr[0].m = _this.data('m');
+				that.arr[0].y = _this.data('y');
+				that.arr[0].m = _this.data('m');
 				// 赋值当日日期
-				_that.arr[0].d = repairZero(_this.data('d'));
+				that.arr[0].d = repairZero(_this.data('d'));
 				// 选中的日期
-				_that.arr[0].c = parseInt(_this.data('day'));
-				_this.
-					addClass('current').
-					siblings().
-					removeClass('current');
+				that.arr[0].c = parseInt(_this.data('day'));
+				addClassExc(_this, 'current');
 			}
 			// 如果有确认栏
-			if (_that.param.confirm) return;
+			if (that.param.confirm) return;
 			// 赋值
-			_that._setVal();
+			that._setVal();
 		}).
 		// 底部工具栏清除
-		on('click', _dom[4], function(){
-			_that.inputDom.val('');
-			_that.picker.
-				find('.current').
-				removeClass('current');
+		on('click', dom[4], function(){
+			that.inputDom.val('');
+			that.picker.find('.current').removeClass('current');
 			// 重置初始化的日期数组
-			_that._reset(true);
-			_that.focus = false;
-			_that.picker.trigger('blur');
+			that._reset(true);
+			that.focus = false;
+			that.picker.trigger('blur');
 		}).
 		// 底部工具栏确定
-		on('click', _dom[5], function(){
-			_that._setVal();
+		on('click', dom[5], function(){
+			that._setVal();
 		}).
 		// 选择时间按钮点击
-		on('click', _dom[6], function(){
+		on('click', dom[6], function(){
 			let _this = $(this);
 			if (_this.hasClass('not-allow')) 
 				return false;
-			let _type = _this.data('type');
-			if(_type == undefined || _type == 0)
+			let type = _this.data('type');
+			if(type == undefined || type == 0)
 			{
-				_this.
-					data('type', 1).
-					html('选择日期');
-				$(_that.picker).
+				_this.data('type', 1).html('选择日期');
+				$(that.picker).
 					find('.body > div').
 					hide().
 					siblings('.picker-time').
@@ -888,118 +806,112 @@ class Datepikcer{
 			_this.
 				data('type', 0).
 				html('选择时间');
-			$(_that.picker).
+			$(that.picker).
 				find('.body > .week, .body > .day').
 				css('display', 'flex').
 				siblings('.picker-time').
 				hide();
 		}).
 		// 选择时间
-		on('click', _dom[7], function(){
+		on('click', dom[7], function(){
 			let _this = $(this),
-			_top = _this.position().top + _this.parent()[0].scrollTop;
-			if (_that.time)
+			top = _this.position().top + _this.parent()[0].scrollTop;
+			if (that.time)
 			{
 				// 赋值
 				if (_this.hasClass('h'))
-					_that.arr[_that.index].h = _this.html();
+					that.arr[that.index].h = _this.html();
 				else if (_this.hasClass('i'))
-					_that.arr[_that.index].i = _this.html();
+					that.arr[that.index].i = _this.html();
 				else
-					_that.arr[_that.index].s = _this.html();
+					that.arr[that.index].s = _this.html();
 			}
 			_this.
 				addClass('current').
 				siblings().
 				removeClass('current').
 				parent().
-				animate({
-					scrollTop : _top
-				}, 200);
+				animate({scrollTop : top}, 200);
 			if (_this.parent().index() == 2)
 				return;
 			// 默认选中下级的第一项
-			_this.
-				parent().
-				next('ul').
-				children('li:first').
-				trigger('click');
+			_this.parent().next('ul').children('li:first').trigger('click');
 		}).
 		// 快捷选择
-		on('click', _dom[8], function(){
+		on('click', dom[8], function(){
 			let _this = $(this);
 			if (_this.index() == 0 || 
 				_this.hasClass('current')) return;
 			// 年
-			let _y = _that.date.getFullYear();
+			let y   = that.date.getFullYear();
 			// 月
-			let _m = repairZero(_that.date.getMonth() + 1);
+			let m   = repairZero(that.date.getMonth() + 1);
 			// 日
-			let _d = _that.date.getDate();
+			let d   = that.date.getDate();
 			// 需要向前的天数
-			let _day = 0;
+			let day = 0;
 			switch(_this.index())
 			{
 				case 1:
-					_day = 3;
+					day = 3;
 				break;
 				case 2:
-					_day = 7;
+					day = 7;
 				break;
 				case 3:
-					_day = 15;
+					day = 15;
 				break;
 				case 4:
-					_day = 30;
+					day = 30;
 				break;
 				case 5:
-					_day = 90;
+					day = 90;
 				break;
 				case 6:
-					_day = 365;
+					day = 365;
 				break;
 			}
-			let _unixTime = Date.parse(new Date().toString()) - 86400000 * _day,
-				_date  = new Date(_unixTime),
-				_fromY = _date.getFullYear(),
-				_fromM = repairZero(_date.getMonth() + 1),
-				_fromD = _date.getDate();
+			let unixTime = Date.parse(new Date().toString()) - 86400000 * day,
+				date  	 = new Date(unixTime),
+				fromY    = date.getFullYear(),
+				fromM    = repairZero(date.getMonth() + 1),
+				fromD    = date.getDate();
 			// 私有方法，重置日历
-			let _func = {
-				reset : (m = 0) => {
+			let func = {
+				reset : (_m = 0) => {
 					// 主日历
-					_that.index = 0;
-					let _day = _that._createYmdHtml(_fromY, _fromM);
-					_that.picker.
+					that.index = 0;
+					let day = that._createYmdHtml(fromY, fromM);
+					that.picker.
 						children('div').
 						eq(1).
 						find('.day').
-						html(_day);
-					_that.picker.
+						html(day);
+					that.picker.
 						find('.show-ym:first').
 						children('.year').
-						html(_fromY + '年').
-						data('y', _fromY).
+						html(fromY + '年').
+						data('y', fromY).
 						next().
-						html(_fromM + '月').
-						data('m', _fromM);
+						html(fromM + '月').
+						data('m', fromM);
 					// 副日历
-					_that.index = 1;
-					let __y = _y;
-					let __m = parseInt(_m) + m;
+					that.index = 1;
+					let __y = y;
+					let __m = parseInt(m) + _m;
 					if (__m > 12)
 					{
 						__m  = 1;
 						__y += 1;
 					}
 					__m = repairZero(__m);
-					_day = _that._createYmdHtml(__y, __m);
-					_that.picker.
+					day = that._createYmdHtml(__y, __m);
+					that.picker.
 						children('div').
 						eq(2).
 						find('.day').
-						html(_day);
-					_that.picker.
+						html(day);
+					that.picker.
 						find('.show-ym:last').
 						children('.year').
 						html(__y + '年').
@@ -1009,57 +921,52 @@ class Datepikcer{
 						data('m', __m);
 				}
 			};
-			_this.
-				addClass('current').
-				siblings().
-				removeClass('current');
-			_that.picker.
-				find('.day .current').
-				removeClass('current');
-			if (_fromY == _y && _fromM == _m)
+			addClassExc(_this, 'current');
+			that.picker.find('.day .current').removeClass('current');
+			if (fromY == y && fromM == m)
 			{
-				_that.picker.
+				that.picker.
 					find('.day:first').
-					children('[data-d="' + _d + '"]:not(.next),[data-d="' + _fromD + '"]:not(.next)').
+					children('[data-d="' + d + '"]:not(.next),[data-d="' + fromD + '"]:not(.next)').
 					addClass('current');
-				_that.arr[0].y = _fromY;
-				_that.arr[0].m = _m;
-				_fromD = repairZero(_fromD);
-				_that.arr[0].d = _fromD;
-				_that.arr[0].c = parseInt(_y + '' + _m + '' + _fromD);
-				_that.arr[1].y = _y;
-				_that.arr[1].m = _m;
-				_d = repairZero(_d);
-				_that.arr[1].d = _d;
-				_that.arr[1].c = parseInt(_y + '' + _m + '' + _d);
-				_that.arr[1].index = 0;
-				_that.pindex = 0;
+				that.arr[0].y = fromY;
+				that.arr[0].m = m;
+				fromD = repairZero(fromD);
+				that.arr[0].d = fromD;
+				that.arr[0].c = parseInt(y + '' + m + '' + fromD);
+				that.arr[1].y = y;
+				that.arr[1].m = m;
+				d = repairZero(d);
+				that.arr[1].d = d;
+				that.arr[1].c = parseInt(y + '' + m + '' + d);
+				that.arr[1].index = 0;
+				that.pindex = 0;
 				// 重置日历
-				let _box = _that.picker.find('.show-ym:first');
-				if (_box.children('.year').data('y') != _y || 
-					_box.children('.month').data('m') != _m)
-				_func.reset(1);
+				let box = that.picker.find('.show-ym:first');
+				if (box.children('.year').data('y') != y || 
+					box.children('.month').data('m') != m)
+				func.reset(1);
 			}
 			else
 			{
-				_that.arr[0].y = _fromY;
-				_that.arr[0].m = _fromM;
-				_fromD = repairZero(_fromD);
-				_that.arr[0].d = _fromD;
-				_that.arr[0].c = parseInt(_fromY + '' + _fromM + '' + _fromD);
-				_that.arr[1].y = _y;
-				_that.arr[1].m = _m;
-				_d = repairZero(_d);
-				_that.arr[1].d = _d;
-				_that.arr[1].c = parseInt(_y + '' + _m + '' + _d);
-				_that.arr[1].index = 1;
-				_that.pindex = 1;
-				_func.reset();
+				that.arr[0].y = fromY;
+				that.arr[0].m = fromM;
+				fromD = repairZero(fromD);
+				that.arr[0].d = fromD;
+				that.arr[0].c = parseInt(fromY + '' + fromM + '' + fromD);
+				that.arr[1].y = y;
+				that.arr[1].m = m;
+				d = repairZero(d);
+				that.arr[1].d = d;
+				that.arr[1].c = parseInt(y + '' + m + '' + d);
+				that.arr[1].index = 1;
+				that.pindex = 1;
+				func.reset();
 			}
-			_that.currentNum = 2;
+			that.currentNum = 2;
 			// 如果没有确认按钮则直接赋值
-			if ( ! _that.param.confirm) 
-				_that._setVal();
+			if ( ! that.param.confirm) 
+				that._setVal();
 		}).
 		on('mousedown', (e) => {
 			e.preventDefault();
@@ -1070,9 +977,9 @@ class Datepikcer{
 	 * 文本框赋值
 	 */
 	_setVal(){
-		let _val  = '';
+		let val  = '';
 		// 私有方法
-		let _func = {
+		let func = {
 			val : (index = 0, type = 0) => {
 				let v = {
 					index : this.arr[index],
@@ -1103,23 +1010,23 @@ class Datepikcer{
 		if (this.param.type == 'date')
 		{
 			// 获取格式化后的日期值
-			_val = _func.val();
+			val = func.val();
 			// 兼容直接点击确定按钮，没有选择具体日期
 			if (this.arr[0].c == 0)
 			{
-				this.arr[this.index].c = _func.val(0, 1);
+				this.arr[this.index].c = func.val(0, 1);
 				this.picker.
 					find('.day').
 					find('span[data-d="' + parseInt(this.arr[0].d) + '"]:not(.next)').
 					addClass('current');
 			}
-			this.focusInput.val(_val);
+			this.focusInput.val(val);
 			// 文本框赋值
 			// 是否转成时间戳
 			if (this.param.unixtime)
 			{
-				if ( ! this.time) _val += ' 00:00:00';
-				_val = Date.parse(new Date(_val)) / 1000;
+				if ( ! this.time) val += ' 00:00:00';
+					val = Date.parse(new Date(val)) / 1000;
 			}
 			if (this.focusInput.next('input').length == 0)
 			{
@@ -1132,12 +1039,12 @@ class Datepikcer{
 				{
 					this.focusInput.
 						removeAttr('name').
-						after(`<input type="hidden" name="${name}" value="${_val}">`);
+						after(`<input type="hidden" name="${name}" value="${val}">`);
 				}
 			}
 			else
 			{
-				this.focusInput.next('input').val(_val);
+				this.focusInput.next('input').val(val);
 			}
 		}
 		// 双日历赋值
@@ -1149,20 +1056,20 @@ class Datepikcer{
 				this.arr[1].c == 0)
 			{
 				if (this.arr[0].c == 0)
-					this.arr[0].c = _func.val(0, 1);
+					this.arr[0].c = func.val(0, 1);
 				if (this.arr[1].c == 0)
-					this.arr[1].c = _func.val(1, 1);
+					this.arr[1].c = func.val(1, 1);
 				this.picker.
 					find('.day').
 					find('span[data-d="' + parseInt(this.arr[0].d) + '"]:not(.next)').
 					addClass('current');
 				this.currentNum = 2;
 			}
-			let from = this.arr[0].c > this.arr[1].c ? _func.val(1) : _func.val();
-			let to   = this.arr[0].c > this.arr[1].c ? _func.val() : _func.val(1);
-			_val += from + ' - ' + to;
+			let from = this.arr[0].c > this.arr[1].c ? func.val(1) : func.val();
+			let to   = this.arr[0].c > this.arr[1].c ? func.val() : func.val(1);
+			val += from + ' - ' + to;
 			// 文本框赋值
-			this.focusInput.val(_val);
+			this.focusInput.val(val);
 			// 是否转成时间戳
 			if (this.param.unixtime)
 			{
@@ -1174,7 +1081,7 @@ class Datepikcer{
 				from = Date.parse(new Date(from)) / 1000;
 				to   = Date.parse(new Date(to)) / 1000;
 			}
-			_val = from + ',' + to;
+			val = from + ',' + to;
 			if (this.focusInput.next('input').length == 0)
 			{
 				let name = this.focusInput.attr('name');
@@ -1186,12 +1093,12 @@ class Datepikcer{
 				{
 					this.focusInput.
 						removeAttr('name').
-						after(`<input type="hidden" name="${name}" value="${_val}">`);
+						after(`<input type="hidden" name="${name}" value="${val}">`);
 				}
 			}
 			else
 			{
-				this.focusInput.next('input').val(_val);
+				this.focusInput.next('input').val(val);
 			}
 		}
 		this.focus = false;
@@ -1200,9 +1107,8 @@ class Datepikcer{
 		if(this.inputDom.length > 1)
 			this._reset(true);
 		// 回调处理
-		if (this.param.change != null && 
-			_.isFunction(this.param.change))
-			this.param.change(_val);
+		if (_.isFunction(this.param.change))
+			this.param.change(val);
 	}
 	
 }

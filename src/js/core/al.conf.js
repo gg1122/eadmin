@@ -22,7 +22,7 @@ for (var i = 0; i < _script.length; i++)
     }
     if (_src.indexOf('al.load') != -1)
     {
-    	_ROOTPATH = _src.replace(/core\/al.load.min.js/, '');
+    	_ROOTPATH = _src.replace(/js\/core\/al.load.min.js/, '');
     	break;
     }
 }

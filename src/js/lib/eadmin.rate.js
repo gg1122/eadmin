@@ -5,6 +5,7 @@
 class Rate{
 
 	constructor(dom, param){
+		this.dom = dom;
 		this.domCache = scope(dom);
 		if (this.domCache.length == 0)
 		{
@@ -12,7 +13,6 @@ class Rate{
 			return;
 		}
 		this.domCache.addClass('rate');
-		this.dom = dom;
 		// 默认参数
 		let _param   = {
 			// 默认分数
@@ -22,7 +22,9 @@ class Rate{
 			// 总分数
 			num 	 : 5,
 			// 回调
-			change   : null
+			change   : null,
+			// 隐藏域
+			bind     : null
 		}
 		// 配置参数
 		this.param = $.extend(_param, param);
@@ -54,81 +56,67 @@ class Rate{
 					</div>`;
 		}
 		this.domCache.html(html);
+		if (this.param.bind != null)
+			this.domCache.after(`<input name="${this.param.bind}" type="hidden" value="${this.param.default}">`);
 	}
 
 	/**
 	 * 事件
 	 */
 	_event(){
-		let v = {
-			prev  : 0,
-			level : 0
-		};
-		let that = this;
-		this.domCache.
+		let [prev, level, that] = [0, 0, this];
+		that.domCache.
 		// 移入
 		on('mouseover', '.star', function(){
-			let _var = {
-				this : $(this)
+			let _this = $(this);
+			let v = {
+				parent : _this.parent()
 			};
-			_var.parent = _var.this.parent();
-			v.level  = _var.this.data('level');
-			if (v.level == 1)
+			level = _this.data('level');
+			if (level == 1)
 			{
-				_var.this.addClass('full');	
+				_this.addClass('full');	
 			}
 			else
 			{
-				_var.parent.
-					children('.star:lt(' + v.level + ')').
-					addClass('full');
+				v.parent.children('.star:lt(' + level + ')').addClass('full');
 			}
 			// 向左移动
-			if (v.level - v.prev < 0)
+			if (level - prev < 0)
 			{
-				_var.parent.
-					children('.star:gt(' + (v.level - 1) + ')').
-					removeClass('full');
+				v.parent.children('.star:gt(' + (level - 1) + ')').removeClass('full');
 			}
 		}).
 		// 移出
 		on('mouseout', '.star', function(){
-			v.prev = v.level;
+			prev = level;
 		}).
 		// 选中
 		on('click', '.star:not(.disabled)', function(){
-			let _var = {
-				this : $(this)
-			};
-			_var.this.
+			let _this = $(this);
+			_this.
 				removeClass('pulse').
 				addClass('pulse').
 				one('webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend', function(){
-					_var.this.removeClass('pulse');
+					_this.removeClass('pulse');
 				});
-			_var.this.
-				parent().
-				data('level', v.level);
-			if (that.param.change != null && 
-				_.isFunction(that.param.change))
-				that.param.change(v.level);
+			_this.parent().data('level', level);
+			if (_.isFunction(that.param.change))
+				that.param.change(level);
+			if (that.param.bind != null)
+				that.domCache.next('input').val(level);
 		}).
+		// 离开
 		on('mouseleave', function(){
-			v.this   = $(this);
-			v.choose = v.this.data('level');
-			if (v.choose == undefined)
+			let _this  = $(this);
+			let choose = _this.data('level');
+			if (choose == undefined)
 			{
-				v.this.
-					children('.star').
-					removeClass('full');
+				_this.children('.star').removeClass('full');
 				return;
 			}
-			v.this.
-				children('.star').
-				removeClass('full');
-			v.this.
-				children('.star:lt(' + v.choose + ')').
-				addClass('full');
+			_this.children('.star').removeClass('full');
+			_this.children('.star:lt(' + choose + ')').addClass('full');
 		});
 	}
 

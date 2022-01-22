@@ -13,8 +13,8 @@ class Colorpicker{
 		}
 		let _param = {
 			color : [
-				'#5EBA00', '#7BD235', '#F1C40F', '#FE9644', '#CD2020',
-				'#F66D9B', '#A55EEA', '#6573CD', '#45AAF2'
+				'#FF2000', '#90e200', '#ffcf00', '#ff7c00', '#f52394',
+				'#00b2d4', '#3366FF', '#FF3E28'
 			],
 			change  : null,
 			bind    : null,
@@ -25,11 +25,17 @@ class Colorpicker{
 		this.run();
 	}
 
+	/**
+	 * 执行
+	 */
 	run(){
 		this._create();
 		this._event();
 	}
 
+	/**
+	 * 创建
+	 */
 	_create(){
 		if (this.param.color.length == 0) return;
 		let v = {
@@ -56,33 +62,25 @@ class Colorpicker{
 		this.domCache.html(v.html);
 	}
 
+	/**
+	 * 事件
+	 */
 	_event(){
 		let that = this;
 		this.domCache.
 		// 选择颜色
 		on('click', '>div:not(.active)', function(){
-			let v = {
-				this : $(this)
-			};
-			that.domCache.
-				find('i').
-				hide();
-			that.domCache.
-				children('input').
-				val(v.this.data('color'));
-			addClassExc(v.this, 'active');
-			v.this.
-				children('i').
-				show();
-			v.color = v.this.data('color');
+			let [_this, color] = [$(this), ''];
+			that.domCache.find('i').hide();
+			that.domCache.children('input').val(_this.data('color'));
+			addClassExc(_this, 'active');
+			_this.children('i').show();
+			color = _this.data('color');
 			// 是否需要绑定隐藏域
 			if (that.param.bind != null)
-			{
-				$('#colorpicker-input-' + that.param.bind).val(v.color);
-			}
-			if (that.param.change != null && 
-				_.isFunction(that.param.change))
-				that.param.change(v.color);
+				$('#colorpicker-input-' + that.param.bind).val(color);
+			if (_.isFunction(that.param.change))
+				that.param.change(color);
 		});
 	}
 

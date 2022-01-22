@@ -8,46 +8,39 @@ class Button{
 	 * 按钮
 	 */
 	static run(dom){
-		let v = {
-			// 延迟按钮
-			delay : dom.find('button[data-delay]'),
-			// 图标按钮
-			icon  : dom.find('button[data-icon]')
-		};
+		let [delay, icon] = [
+			dom.find('button[data-delay]'),
+			dom.find('button[data-icon]:not([data-delay])')
+		];
 		// 延迟按钮处理
-		v.delay.each(function(){
+		delay.each(function(){
+			let _this = $(this);
 			// 私有变量组
-			let _var = {
-				this : $(this)
+			let v = {
+				html  : _this.html(),
+				delay : _this.data('delay')
 			};
-			_var.html  = _var.this.html();
-			_var.delay = _var.this.data('delay');
 			// 按钮状态与赋值
-			_var.this.
-				attr('disabled', true).
-				html(`倒计时（${_var.delay}）秒后可操作`);
-			_var.time = setInterval(() => {
-				_var.delay--;
-				_var.this.html(`倒计时（${_var.delay}）秒后可操作`);
-				if (_var.delay == 0)
+			_this.attr('disabled', true).html(`倒计时（${v.delay}）秒后可操作`);
+			v.time = setInterval(() => {
+				v.delay--;
+				_this.html(`倒计时（${v.delay}）秒后可操作`);
+				if (v.delay == 0)
 				{
-					clearInterval(_var.time);
-					_var.this.
-						attr('disabled', false).
-						html(_var.html);
+					clearInterval(v.time);
+					if ( ! _.isUndefined(_this.data('icon')))
+						v.html = `<i class="${_this.data('icon')}"></i>` + v.html;
+					_this.attr('disabled', false).html(v.html);
 				}
 			}, 1000);
 		});
 		// 图标按钮处理
-		v.icon.each(function(){
-			let _var = {
-				this : $(this)
-			};
-			_var.style = '';
-			if (_var.this.is(':empty'))
-				_var.style += ' style="margin-right:0;"';
-			_var.html = `<i${_var.style} class="${_var.this.data('icon')}"></i>`;
-			_var.this.prepend(_var.html);
+		icon.each(function(){
+			let _this = $(this);
+			let style = '';
+			if (_this.is(':empty'))
+				style += ' style="margin-right:0;"';
+			_this.prepend(`<i${style} class="${_this.data('icon')}"></i>`);
 		});
 	}
 
@@ -59,27 +52,21 @@ class Button{
 		// 加载按钮点击事件
 		body.
 		on('click', 'button[data-loading]', function(){
-			let v = {
-				this : $(this)
-			};
+			let _this = $(this);
+			let _do   = _this.data('do');
 			// 如果是提交表单的按钮则不进行后续处理
-			if (v.this.data('submit') != undefined)
+			if (_this.data('submit') != undefined)
 				return;
-			that.loading(v.this);
-			// 回调
-			v.do = v.this.data('do');
-			if (v.do == undefined)
-			{
-				return;
-			}
+			that.loading(_this);
+			if (_do == undefined) return;
 			try{
 				Method != undefined;
-				if ( ! _.isFunction(Method[v.do]))
+				if ( ! _.isFunction(Method[_do]))
 				{
-					console.log('指定的' + v.do + '不是一个可被调用的函数');
+					console.log('指定的' + _do + '不是一个可被调用的函数');
 					return;
 				}
-				Method[v.do](v.this);
+				Method[_do](_this);
 			}
 			catch(e){
 				console.log(e);
@@ -91,9 +78,7 @@ class Button{
 	 * 重置
 	 */
 	static reset(btn){
-		btn.
-			attr('disabled', false).
-			html(btn.data('source'));
+		btn.attr('disabled', false).html(btn.data('source'));
 	}
 
 	/**

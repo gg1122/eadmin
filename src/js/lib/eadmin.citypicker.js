@@ -62,13 +62,20 @@ class Citypikcer{
 	 * 创建结构
 	 */
 	_create(){
-		let _dom = createId();
+		let [dom, zindex] = [
+			createId(), ''
+		];
+		if (Mount.window != null)
+		{
+			zindex = $('#' + Mount.window).css('z-index');
+			zindex = zindex == undefined ? '' : `z-index:${zindex};`;
+		}
 		// 组装HTML结构
-		let _html = `<div id="citypicker-${_dom}" class="citypicker animated faster${(Mount.window) == null ? '' : ' ' + Mount.window} dn"`;
+		let html = `<div id="citypicker-${dom}" class="citypicker animated faster${(Mount.window) == null ? '' : ' ' + Mount.window}"`;
 		if (this.param.type == 1)
 		{
-			_html += ' style="width:472px;">';
-			_html += `<span class="title">Tips：输入城市拼音首字母可快速选择，例如：hf</span>
+			html += ` style="width:472px;${zindex}">`;
+			html += `<span class="title">Tips：输入城市拼音首字母可快速选择，例如：hf</span>
 			<div class="header">
 				<span class="current">热门</span>
 				<span>ABC</span>
@@ -86,12 +93,11 @@ class Citypikcer{
 		}
 		else
 		{
-			_html += '>';
-			_html += `<div class="vert iscroll"></div>`;
+			html += `style="${zindex}"><div class="vert iscroll"></div>`;
 		}
-		_html += `</div>`;
-		body.append(_html);
-		this.picker = $('#citypicker-' + _dom);
+		html += `</div>`;
+		body.append(html);
+		this.picker = $('#citypicker-' + dom);
 		if (this.param.type == 2)
 			this.picker.css('padding', '5px');
 	}
@@ -110,29 +116,20 @@ class Citypikcer{
 			// 多级
 			'.vert span'
 		];
-		let v = {};
+		let [_body, quick] = [
+			that.picker.children('.body'),
+			that.picker.children('.quick')
+		];
 		// 私有变量
-		if (that.param.type == 1)
-		{
-			v = {
-				body   : that.picker.children('.body'),
-				header : that.picker.children('.header'),
-				quick  : that.picker.children('.quick')
-			};
-		}
-		else
-		{
-			v = {
-				body : that.picker.children('.vert')
-			};
-		}
+		if (that.param.type != 1)
+			_body = that.picker.children('.vert');
 		// 开始监听事件
 		this.inputDom.
 		// 显示面板
 		on('focus', function(){
 			if( ! that.init)
 			{
-				that._formatData(v.body);
+				that._formatData(_body);
 				that.init = true;
 			}
 			fadeIn(that.picker, $(this), false);
@@ -144,26 +141,28 @@ class Citypikcer{
 			fadeOut(that.picker);
 			clear = false;
 		});
+		// 搜索
 		keyup(this.inputDom, (dom, e) => {
-			let _v = {
-				val : dom.val(),
-				key : e.keyCode
+			let v = {
+				val  : dom.val(),
+				key  : e.keyCode,
+				html : ''
 			};
 			if (that.param.type == 1)
 			{
-				if (_v.val == '' || 
-					( ! (_v.key > 64 && _v.key < 91) && 
-					_v.key != 8 && 
-					_v.key != 32))
+				if (v.val == '' || 
+					( ! (v.key > 64 && v.key < 91) && 
+					v.key != 8 && 
+					v.key != 32))
 				{
-					if (_v.val == '') that._reset();
+					if (v.val == '') that._reset();
 					return;
 				}
 				if (that.picker.is(':hidden'))
 				{
 					fadeIn(that.picker, dom, false);
 				}
-				if (v.quick.is(':hidden'))
+				if (quick.is(':hidden'))
 				{
 					that.picker.
 						data('left', that.picker.css('left')).
@@ -171,113 +170,93 @@ class Citypikcer{
 						width(158).
 						children('.title').
 						html(' ↑ ↓ 键快速选择城市');
-					that.picker.
-						children('.header, .body').
-						hide();
-					that.picker.
-						children('.quick').
-						show();
+					that.picker.children('.header, .body').hide();
+					quick.show();
 				}
-				_v.html = '';
 				$.each(cp_b, function(i, item){
-					if (item.indexOf(_v.val) != -1)
+					if (item.indexOf(v.val) != -1)
 					{
-						let _arr = item.split('@');
-						_v.html += `<span>${_arr[0]}</span>`;
+						let arr = item.split('@');
+						v.html += `<span>${arr[0]}</span>`;
 					}
 				});
-				that.picker.
-					children('.quick').
-					html(_v.html);
+				quick.html(v.html);
 				return;
 			}
 			that.level = 1;
-			that.picker.
-				children('.vert:first').
-				nextAll('.vert').
-				remove();
-			if (_v.val == '')
+			_body.eq(0).nextAll('.vert').remove();
+			if (v.val == '')
 			{
-				that._formatData(v.body);
+				that._formatData(_body);
 				return;
 			}
-			_v.html = '';
-			_v.icon = '';
+			v.html = v.icon = '';
 			if (that.param.type == 2 && 
 				that.param.level > 1)
-			{
-				_v.icon = `<i class="ri-arrow-right-s-line"></i>`;
-			}
+				v.icon = `<i class="ri-arrow-right-s-line"></i>`;
 			$.each(cp_d, function(i, item){
-				if (item.indexOf(_v.val) != -1)
+				if (item.indexOf(v.val) != -1)
 				{
-					let _arr = item.split('@');
-					_v.html += `<span data-c="${_arr[0]}" data-i="${i}">${_arr[0]}${_v.icon}</span>`;
+					let arr = item.split('@');
+					v.html += `<span data-c="${arr[0]}" data-i="${i}">${arr[0]}${v.icon}</span>`;
 				}
 			});
-			that.picker.
-				children('.vert:first').
-				html(_v.html);
+			_body.eq(0).html(v.html);
 		});
 		if (that.param.type == 1)
 		{
 			that.inputDom.
 			on('keydown', function(event){
 				if (_.indexOf([13, 38, 40], event.keyCode) == -1 || 
-					v.quick.is(':hidden'))
-				{
-					return;
-				}
-				let _span = v.quick.children('span');
+					quick.is(':hidden')) return;
+				let span = quick.children('span');
 				// 回车
 				if (event.keyCode == 13)
 				{
-					that._setVal(_span.eq(that.index).html());
+					that._setVal(span.eq(that.index).html());
 					return;
 				}
 				// 上
 				if (event.keyCode == 38)
 				{
 					if (that.index < 0)
-						that.index = _span.length - 1;
+						that.index = span.length - 1;
 					that.index -= 1;
 				}
 				// 下
 				if (event.keyCode == 40)
 				{
-					if (that.index == (_span.length - 1) || 
-						v.quick.children('.current').length == 0) 
+					if (that.index == (span.length - 1) || 
+						quick.children('.current').length == 0) 
 						that.index = -1;
 					that.index += 1;
 				}
 				if (that.index < 0)
 				{
-					that.scrollTop = v.quick[0].scrollHeight - v.quick.height();
-					v.quick.scrollTop(that.scrollTop);
+					that.scrollTop = quick[0].scrollHeight - quick.height();
+					quick.scrollTop(that.scrollTop);
 				}
 				if (that.index == 0)
 				{
 					that.scrollTop = 0;
-					v.quick.scrollTop(0);
+					quick.scrollTop(0);
 				}
-				_span.
+				span.
 					eq(that.index).
 					addClass('current').
 					siblings().
 					removeClass('current');
 				// 滚动条跟随
-				let _pt = _span.eq(that.index).position().top;
-				if (_pt > 200 && that.index >= 0)
+				let pt = span.eq(that.index).position().top;
+				if (pt > 200 && that.index >= 0)
 				{
 					that.scrollTop += 215;
-					v.quick.
-						scrollTop(that.scrollTop);
+					quick.scrollTop(that.scrollTop);
 				}
-				else if (_pt <= 0)
+				else if (pt <= 0)
 				{
 					that.scrollTop -= 215;
-					v.quick.
-						scrollTop(that.scrollTop);
+					quick.scrollTop(that.scrollTop);
 				}
 			});
 		}
@@ -290,12 +269,9 @@ class Citypikcer{
 		}).
 		// 选项卡切换
 		on('click', dom[0], function(){
-			let _v = {
-				this : $(this)
-			};
-			_v.city = cp_a[_v.this.index()];
-			addClassExc(_v.this, 'current');
-			that._formatData(v.body, _v.city);
+			let _this = $(this);
+			addClassExc(_this, 'current');
+			that._formatData(_body, cp_a[_this.index()]);
 		}).
 		// 选择城市
 		on('click', dom[1], function(){
@@ -304,55 +280,50 @@ class Citypikcer{
 		}).
 		// 多级
 		on('click', dom[2], function(){
-			let _v = {
-				this : $(this)
-			};
-			_v.val = _v.this.data('c');
+			let [_this, v] = [$(this), {}];
+			v.val = _this.data('c');
 			if (that.param.level == 1)
 			{
-				that._setVal(_v.val);
+				that._setVal(v.val);
 				return;
 			}
-			addClassExc(_v.this, 'current');
-			_v.parent  = _v.this.parent();
-			that.level = _v.parent.index() + 1;
+			addClassExc(_this, 'current');
+			v.parent   = _this.parent();
+			that.level = v.parent.index() + 1;
 			if (that.level == that.param.level)
 			{
-				_v.val = '';
-				_v.doc = '';
+				v.val = v.doc = '';
 				that.picker.find('.current').each(function(){
-					_v.val += _v.doc + $(this).data('c');
-					_v.doc = that.param.format; 
+					v.val += v.doc + $(this).data('c');
+					v.doc  = that.param.format; 
 				});
-				that._setVal(_v.val);
+				that._setVal(v.val);
 				return;
 			}
 			else
 			{
-				_v.parent.
-					nextAll('.vert').
-					remove();
+				v.parent.nextAll('.vert').remove();
 			}
-			_v.index = _v.this.data('i');
-			_v.next  = _v.parent.next('.vert');
-			if (_v.next.length == 0)
+			v.index = _this.data('i');
+			v.next  = v.parent.next('.vert');
+			if (v.next.length == 0)
 			{
 				that.level += 1;
 				that.picker.append(`<div class="vert"></div>`);
-				_v.next = that.picker.children('.vert:last');
-				Eadmin.scroll(_v.next[0]);
+				v.next = that.picker.children('.vert:last');
+				Eadmin.scroll(v.next[0]);
 			}
-			_v.source = null;
+			v.source = null;
 			if (that.level == 2)
 			{
-				that.prov = _v.index;
-				_v.source = cp_c[_v.index].sub;
+				that.prov = v.index;
+				v.source = cp_c[v.index].sub;
 			}
 			else
 			{
-				_v.source = cp_c[that.prov].sub[_v.index].sub;
+				v.source = cp_c[that.prov].sub[v.index].sub;
 			}
-			that._formatData(_v.next, _v.source, true);
+			that._formatData(v.next, v.source, true);
 		}).
 		on('mousedown', (e) => {
 			e.preventDefault();
@@ -373,8 +344,8 @@ class Citypikcer{
 			}
 			else
 			{
-				for (let _c in source)
-					_source[_c] = source[_c].name;
+				for (let c in source)
+					_source[c] = source[c].name;
 			}
 		}
 		else
@@ -386,22 +357,21 @@ class Citypikcer{
 			else
 			{
 				_source = [];
-				for (let _c in cp_c)
-					_source[_c] = cp_c[_c].name;
+				for (let c in cp_c)
+					_source[c] = cp_c[c].name;
 			}
 		}
-		let _html = '';
-		let _icon = '';
+		let [html, icon] = ['', ''];
 		if (this.param.type == 2 && 
 			this.level < this.param.level)
 		{
-			_icon = `<i class="ri-arrow-right-s-line"></i>`;
+			icon = `<i class="ri-arrow-right-s-line"></i>`;
 		}
-		for (let _i in _source)
+		for (let i in _source)
 		{
-			_html += `<span data-c="${_source[_i]}" data-i="${_i}">${_source[_i]}${_icon}</span>`;
+			html += `<span data-c="${_source[i]}" data-i="${i}">${_source[i]}${icon}</span>`;
 		}
-		box.html(_html);
+		box.html(html);
 	}
 
 	/**
@@ -452,8 +422,7 @@ class Citypikcer{
 	 */
 	_callback(val){
 		// 回调处理
-		if (this.param.change != null && 
-			_.isFunction(this.param.change))
+		if (_.isFunction(this.param.change))
 			this.param.change(val);
 	}
 	

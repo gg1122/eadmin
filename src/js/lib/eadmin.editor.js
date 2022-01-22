@@ -2,7 +2,7 @@
  * eadmin 编辑器
  */
 
-class Editor{	
+class Editor{
 
 	constructor(dom, param){
         this.storeKey = md5(Eadmin.currentHref + dom);
@@ -26,8 +26,6 @@ class Editor{
             name : 'editor',
 			// 编辑器高度
             height   : 300,
-            // 编辑器默认内容
-            default  : '',
             // 是否只读
             readonly : false,
             // 设置默认显示文案
@@ -42,10 +40,8 @@ class Editor{
             filename  : 'file',
             // 是否自动保存输入内容
             autosave  : false,
-            // 同请求一起发送的header头
-            header : {
-                'Content-Type' : 'multipart/form-data'
-            }
+            // 自动保存时间间隔
+            savetime : 3
 		}
 		// 配置参数
         this.param = $.extend(true, _param, param);
@@ -56,17 +52,8 @@ class Editor{
 		}
 		// 拼接接口
         if ( ! _.startsWith(this.param.api, 'http'))
-		{
-            if ( ! _.startsWith(module.conf.http.baseURL, 'http'))
-            {
-                console.log('上传文件接收接口地址不完整');
-                return false;
-            }
-			this.param.api = module.conf.http.baseURL + this.param.api;
-        }
-        this.domCache.
-            css('min-height', this.param.height).
-            after(`<input class="dn" type="file" accept="image/*">`);
+		    this.param.api = module.conf.http.baseURL + this.param.api;
+        this.domCache.css('min-height', this.param.height).after(`<input class="dn" type="file" accept="image/*">`);
         if (_default == '')
         {
             let content = store(this.storeKey);
@@ -74,12 +61,7 @@ class Editor{
                 this.domCache.html(content);
         }
         this.quill = null;
-		this.run();
-    }
-    
-    run()
-    {
-        this.create();
+		this.create();
     }
 
     /**
@@ -126,7 +108,7 @@ class Editor{
                 toolbar : options
             },
             placeholder : this.param.placeholder,
-            readonly : this.param.readonly
+            readOnly : this.param.readonly
         });
         this.domCache.
             next().
@@ -146,7 +128,7 @@ class Editor{
             if (that.param.doc.indexOf(type) == -1)
             {
                 Eadmin.message.error({
-                    content : '图片大小不允许，上传失败'
+                    content : '图片格式不允许，上传失败'
                 });
                 return;
             }
@@ -161,35 +143,17 @@ class Editor{
             }
             let form = new FormData();
             form.append(that.param.filename, file, file.name);
-            axios.post(that.param.api, form, that.param.header).
-            then((response) => {
-                let data = response.data;
-				if (data[module.conf.http.code_field] == undefined)
-				{
-					console.log('接口返回结果中没有找到定义的code码字段');
-					return;
-				}
-                // 执行成功
-				if (data[module.conf.http.code_field] == module.conf.http.code_success)
-				{
+            module.conf.http.headers['Content-Type'] = 'multipart/form-data';
+            Eadmin.post({
+                url  : that.param.api,
+                form : form,
+                then : (data) => {
                     let range = that.quill.getSelection();
                     let newRange = 0 + (range !== null ? range.index : 0);
                     that.quill.insertEmbed(newRange, 'image', data.pic);
                     that.quill.setSelection(1 + newRange);
-					return;
-				}
-				let msg = '图片上传失败';
-				if (data[module.conf.http.msg_field] != undefined)
-					msg = data[module.conf.http.msg_field];
-				Eadmin.message.error({
-					content : msg
-				});
-            }).
-			catch((error) => {
-				Eadmin.message.error({
-					content : error
-				});
-			});
+                }
+            });
         });
         if ( ! this.param.autosave)
             return;
@@ -198,7 +162,7 @@ class Editor{
             Eadmin.message.info({
                 content : '编辑内容已实时保存至本地'
             });
-        }, 1000));
+        }, this.param.savetime * 1000));
         this.quill.on('text-change', () => {
             this.domCache.
                 next().

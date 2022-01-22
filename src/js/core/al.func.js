@@ -12,27 +12,29 @@
 // 获取隐藏元素宽度高度
 function hideDom(obj, type)
 {
-	var _obj = obj.clone();
-	_obj.
+	let v = {
+		obj : obj.clone,
+		return : ''
+	};
+	v.obj.
 	appendTo('html').
 	css({
 		'position' : 'absolute',
 		'left'     : '-9999px',
 		'display'  : 'block'
 	});
-	var _return;
 	if (type == undefined)
 	{
-		_return = _obj.outerWidth();
+		v.return = v.obj.outerWidth();
 	}
 	else
 	{
-		_return = (type == 'width') 
-					? _obj.outerWidth() 
-					: _obj.outerHeight();
+		v.return = (type == 'width') 
+					? v.obj.outerWidth() 
+					: v.obj.outerHeight();
 	}
-	_obj.remove();
-	return _return;
+	v.obj.remove();
+	return v.return;
 }
 
 // 获取INNER_WIDTH
@@ -69,8 +71,10 @@ function innerH()
 	}
 }
 
-// 禁止选中，type：1可选，0不可选
-function selectText(type)
+// 禁止/允许页面内容选中
+// 1：允许
+// 0：禁止
+function userselect(type)
 {
 	type = (type == undefined) ? 1 : 0;
 	if (type == 1)
@@ -90,19 +94,17 @@ function selectText(type)
 // 禁用右键
 function disabledRight()
 {
-	$(document).bind('contextmenu', function(e){
+	$(document).on('contextmenu', function(e){
         return false;
     });
 }
 
-/**
- * 键盘输入防抖
- */
+// 键盘输入防抖
 function keyup(dom, callback)
 {
-	var T = null;
+	let T = null;
 	dom.on('keyup', function(e){
-		var _this = $(this);
+		let _this = $(this);
 		clearTimeout(T);
 		T = setTimeout(function(){
 			callback(_this, e);
@@ -110,68 +112,70 @@ function keyup(dom, callback)
 	});
 }
 
-/**
- * 获取指定元素到可视区域四个方向的距离
- */
+// 获取指定元素到可视区域四个方向的距离
+// @dom：指定的dom元素
+// @type：方向，top、bottom、left、right
+// @cut：是否减去自身宽度
 function distance(dom, type, cut = true)
 {
-	var _val;
+	let val;
 	switch (type)
 	{
 		case 'top':
-			_val = dom.offset().top;
+			val = dom.offset().top;
 		break;
 		case 'bottom':
-			_val = innerH() - dom.offset().top - dom.outerHeight() - 10;
+			val = innerH() - dom.offset().top - dom.outerHeight() - 10;
 		break;
 		case 'left':
-			_val = dom.offset().left;
+			val = dom.offset().left;
 		break;
 		case 'right':
-			_val = innerW() - dom.offset().left;
+			val = innerW() - dom.offset().left;
 			if (cut)
-				_val -= dom.outerWidth(); 
+				val -= dom.outerWidth(); 
 		break;
 	}
-	return _val;
+	return val;
 }
 
-/**
- * 全局通用显示
- */
+// 全局通用显示动画效果
+// @dom：需要淡入的dom
+// @source：触发该次动作的来源，如果指定，则表示要自动定位在该来源的合适位置上
+// @cut：是否减去自身宽度
 function fadeIn(dom, source = null, cut = true)
 {
 	// 如果传递触发事件的原DOM，则表示需要自动定位
 	if (source != null)
 	{
 		// 定义局部变量
-		var _var = {
+		let v = {
 			top  : 0,
 			left : 0,
 			pickerOuterHeight : dom.outerHeight(),
 			pickerOuterWidth  : dom.outerWidth()
 		};
-		_var.inputOuterHeight = source.outerHeight();
-		_var.inputOuterWidth  = source.outerWidth();
-		_var.offset = source.offset();
-		_var.left   = _var.offset.left;
-		_var.top    = _var.offset.top;
+		v.inputOuterHeight = source.outerHeight();
+		v.inputOuterWidth  = source.outerWidth();
+		v.offset = source.offset();
+		v.left   = v.offset.left;
+		v.top    = v.offset.top;
 		// 判断显示的位置
 		// 用来控制如果下方空间不够则在上方显示，反之也是
-		if (distance(source, 'bottom') < _var.pickerOuterHeight)
+		if (distance(source, 'bottom') < v.pickerOuterHeight)
 		{
-			_var.top -= (_var.pickerOuterHeight + 5);
+			v.top -= (v.pickerOuterHeight + 5);
 		}
 		else
 		{
-			_var.top += (_var.inputOuterHeight + 5);
+			v.top += (v.inputOuterHeight + 5);
 		}
 		// 判断距离右侧宽度是否充足
-		if (distance(source, 'right', cut) < _var.pickerOuterWidth)
-			_var.left -= (_var.pickerOuterWidth - _var.inputOuterWidth);
+		if (distance(source, 'right', cut) < v.pickerOuterWidth)
+			v.left -= (v.pickerOuterWidth - v.inputOuterWidth);
 		dom.css({
-			left : _var.left,
-			top  : _var.top
+			left : v.left,
+			top  : v.top
 		}).attr('tabindex', 0);
 	}
 	dom.
@@ -181,22 +185,22 @@ function fadeIn(dom, source = null, cut = true)
 		addClass('fadeInDown');
 }
 
-/**
- * 全局通用隐藏
- */
+// 全局通用隐藏效果
+// @dom
+// @callback：隐藏后的回调
 function fadeOut(dom, callback = null)
 {
 	dom.
-		removeClass('fadeInDown').
-		addClass('fadeOutUp').
-		on('animationend', function(){
-			$(this).hide();
-			if (callback != null) callback();
-		});
+	removeClass('fadeInDown').
+	addClass('fadeOutUp').
+	on('animationend', function(){
+		$(this).hide();
+		if (_.isFunction(callback)) callback();
+	});
 }
 
 /**
- * 不足10自动补0
+ * 不足10自动补0，用在日历组件中
  * @param {*} num 
  */
 function repairZero(num)
@@ -204,20 +208,16 @@ function repairZero(num)
 	return (num < 10) ? '0' + num : num;
 }
 
-/**
- * 同级别排他增加class
- */
+// 同级别排他增加class
 function addClassExc(dom, classname)
 {
 	dom.
-		addClass(classname).
-		siblings().
-		removeClass(classname);
+	addClass(classname).
+	siblings().
+	removeClass(classname);
 }
 
-/**
- * 作用域
- */
+// 真实作用域，主要用来区分直接页面还是WINDOW中，避免DOM元素的ID冲突
 function scope(dom)
 {
 	if (dom === false) return false;
@@ -231,119 +231,82 @@ function scope(dom)
 	}
 }
 
-/**
- * 生成唯一ID
- */
+// 生成唯一ID
 function createId()
 {
 	return (new Date()).valueOf() + Math.random().toString().slice(-6);
 }
 
-/**
- * 缺省图加载
- */
+// 缺省图加载
 function defaultImg(box)
 {
 	if (module.conf.error_default_img == '')
 		return;
-	box.
-		find('img').
-		each(function(){
-			let v = {
-				this : $(this)
-			}
-			v.this.on('error', () => {
-				v.this.attr('src', module.conf.error_default_img);
-			});
+	box.find('img').each(function(){
+		let _this = $(this);
+		_this.on('error', () => {
+			_this.attr('src', module.conf.error_default_img);
+		});
 	});
 }
 
-/**
- * 块标题
- */
+// 处理块元素特殊情况
 function block(dom)
 {
+	// 自适应列宽
+	col(dom);
 	// 块标题
-	dom.find('.block-title').each(function(){
-		let v = {
-			this : $(this)
-		};
-		v.icon = v.this.data('icon');
+	dom.find('.block-title').
+	each(function(){
+		let [_this, v] = [$(this), {}];
+		// 自定义图标
+		v.icon = _this.data('icon');
 		if (v.icon == undefined)
 		{
-			v.this.prepend('<span></span>');
+			_this.prepend('<span></span>');
 		}
 		else
 		{
-			v.color = v.this.data('icon-color');
+			v.color = _this.data('icon-color');
 			if (v.color != undefined)
-				v.icon += ' color-' + v.color;
-			v.this.
-				css('padding-left', 0).
-				prepend(`<i class="${v.icon}"></i>`);
+				v.icon += ' font-color-' + v.color;
+			_this.css('padding-left', 0).prepend(`<i class="${v.icon}"></i>`);
 		}
 	});
 	// 块
-	dom.find('.block').each(function(){
-		let v = {this : $(this)};
-		if (v.this.data('block-data') != undefined)
+	dom.find('.block-data').
+	each(function(){
+		let [_this, v] = [$(this), {}];
+		_this.addClass('block-data');
+		v.small = _this.data('small');
+		if (v.small != undefined)
+			_this.addClass('block-data-small');
+		v.color = _this.data('color');
+		if (v.color != undefined)
 		{
-			v.this.addClass('block-data');
-			v.small = v.this.data('small');
-			if (v.small != undefined)
-				v.this.addClass('block-data-small');
-			v.color = v.this.data('color');
-			if (v.color != undefined)
-			{
-				v.color = 'color-' + v.color;
-				v.this.
-					find('.num').
-					addClass(v.color);
-			}
-			else
-			{
-				v.color = '';
-			}
-			v.icon = v.this.data('icon');
-			if (v.icon != undefined)
-			{
-				v.this.
-					children('h5').
-					prepend(`<i class="${v.icon} ${v.color}"></i>`);
-			}
+			v.color = 'font-color-' + v.color;
+			_this.find('.num').addClass(v.color);
 		}
-		if (v.this.data('block-href') != undefined)
+		else
 		{
-			v.this.addClass('block-href');
-			v.color = v.this.data('color');
-			if (v.color != undefined)
-			{
-				v.color = 'color-' + v.color;
-			}
-			else
-			{
-				v.color = '';
-			}
-			v.icon = v.this.data('icon');
-			if (v.icon != undefined)
-				v.this.prepend(`<i class="${v.icon} ${v.color}"></i>`);
+			v.color = '';
+		}
+		v.icon = _this.data('icon');
+		if (v.icon != undefined)
+		{
+			_this.children('h5').prepend(`<i class="${v.icon} ${v.color}"></i>`);
 		}
 	});
-	// 自适应
-	col(dom);
 }
 
-/**
- * 自适应
- */
+// 自适应
 function col(dom)
 {
 	// 自适应
-	dom.find("[class*='col-']").each(function(){
-		let v = {
-			this : $(this)
-		};
-		v.class = v.this.attr('class');
+	dom.find("[class*='col-']").
+	each(function(){
+		let [_this, v] = [$(this), {}];
+		v.class = _this.attr('class');
 		v.class.replace(/col-([\d]+)/g, function(){
 			v.col = parseInt(arguments[1]);
 			switch (v.col)
@@ -385,25 +348,19 @@ function col(dom)
 					v.class = 'col-xl-12 col-lg-12';
 				break;
 			}
-			v.this.
-				removeClass('col-' + v.col).
-				addClass(v.class);
+			_this.removeClass('col-' + v.col).addClass(v.class);
 		});
 	});
 }
 
-/**
- * 设置路由
- */
+// 设置路由
 function setRoute(url = '')
 {
 	window.history.pushState(null, null, '#' + url);
 }
 
-/**
- * 获取路由
- */
-function getRoute()
+// 获取路由
+function getRoute(homepage = true)
 {
 	let hash = window.location.hash;
 	if (hash == '')
@@ -411,5 +368,33 @@ function getRoute()
 		return false;
 	}
 	let arr = hash.split('#');
+	if (arr[2] != undefined && homepage)
+	{
+		return false;
+	}
 	return arr[1];
+}
+
+// 获取URL参数
+function query(url, qs = false)
+{
+	let arr;
+	if (url.indexOf('?') != -1)
+	{
+		arr = url.split('?');
+		if (arr.length == 1)
+			return '';
+		arr = arr[1].split('&');
+	}
+	else
+	{
+		arr = url.split('&');
+	}
+	let query = {};
+	for (let i in arr)
+	{
+		let get = arr[i].split('=');
+		query[get[0]] = get[1];
+	}
+	return qs ? query : JSON.stringify(query);
 }

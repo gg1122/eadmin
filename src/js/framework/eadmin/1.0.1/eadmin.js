@@ -1,8 +1,15 @@
-/**
- * eadmin核心通用框架
+/*
+ * =================================
+ * eadmin
+ * 用途： 核心类
+ * 开发人员：surui / 317953536@qq.com
+ * 版本：V2.0.1
+ * =================================
+ * 功能：核心类
+ * =================================
  */
 
-// 定义主容器DOM缓存和导航数据
+// 定义主容器DOM缓存
 let box;
 
 /**
@@ -16,9 +23,9 @@ let eadmin = class Eadmin{
     constructor(){
         box = $('#container');
         // 禁止选中
-        if ( ! module.conf.allow_select_text)
+        if ( ! module.conf.allow_user_select)
         {
-            selectText(0);
+            userselect(0);
             selectEnabled = false;
         }
         // 禁止右键
@@ -28,68 +35,85 @@ let eadmin = class Eadmin{
         }
         // 当前链接
         this.href = '';
-        // 实时链接
+        // 实时链接，这个链接和this.href的区别是，这个链接可能是弹窗内的链接或者TAB中的链接
         this.currentHref = '';
         // 大盒子的滚动条对象
         this.boxScroll = null;
         // 默认响应链接跳转
         this.jumpHref();
         // 如果有通知消息则设置默认顶部距离
-        if (module.lib.indexOf('notice') != -1)
+        $('body').append('<div id="notice"></div>');
+        $('#notice').css('top', module.conf.notice_top);
+        // 预加载错误图片
+        if (module.conf.error_default_img != undefined && 
+            module.conf.error_default_img != '')
         {
-            $('body').append('<div id="notice"></div>');
-            $('#notice').css('top', module.conf.notice_top);
+            $('body').append(`<img id="error-default-img" src="${module.conf.error_default_img}" class="dn">`);
+            $('#error-default-img').on('error', () => {
+                module.conf.error_default_img = '';
+                console.log('默认缺省图' + module.conf.error_default_img + ' 不可用');
+            });
         }
-        // 兼容手机
-        $('header').
-            after(`<div class="mobile-nav"></div>`).
-            append(`<i class="ri-menu-line mobile-menu"></i>`);
-        // 手机端展开事件
-        $('body').on('click', '.mobile-menu', function(){
-            let v = {
-                this : $(this)
-            };
-            if (v.this.data('open') == undefined)
-            {
-                v.this.
-                    addClass('ri-close-line').
-                    removeClass('ri-menu-line').
-                    data('open', 1);
-                $('.mobile-nav').show();
-            }
-            else
-            {
-                v.this.
-                    addClass('ri-menu-line').
-                    removeClass('ri-close-line').
-                    removeData('open');
-                $('.mobile-nav').hide();
-            }
+        // 双击回顶
+        if (module.conf.dblclick_goto_top)
+        {
+            box.on('dblclick', () => {
+                let dblclick = store('dblclick');
+                if (dblclick === '0')
+                {
+                    return;
+                }
+                if (dblclick === '1')
+                {
+                    box.scrollTop(0);
+                    return;
+                }
+                Popup.confirm({
+                    content : '是否同意开启双击回顶功能，本消息仅提示一次',
+                    submit  : () => {
+                        store('dblclick', '1');
+                        Popup.success({
+                            content : '双击回顶设置成功',
+                            submit  : () => {box.scrollTop(0);}
+                        });
+                    },
+                    cancel : () => {
+                        store('dblclick', '0');
+                    }
+                });
+            });
+        }
+        if (module.plugin == undefined)
+            module.plugin = [];
+        // 遮罩
+        $('body').append('<div class="mask dn"></div>');
+        // 加载进度条
+        $('body').append(`<div id="loading-progress"></div>`);
+    }
+
+    /**
+     * 页面加载顶部进度条
+     * @type 类型，1：显示 0：隐藏
+     */
+    loadingProgress(type = 1)
+    {
+        let dom = $('#loading-progress');
+        if (type == 1)
+        {
+            dom.css('opacity', 1).animate({
+                width : innerW()
+            }, 10000);
+            return;
+        }
+        dom.stop().width(innerW()).animate({
+            opacity : 0
         });
-    }
-
-    /**
-     * 加载中
-     */
-    loading(msg = ''){
-        this.mask();
-        $('.mask').html(`<i class="ri-loader-4-line rotate"></i>${msg == '' ? '页面加载中，请稍候...' : msg}`);
-    }
-
-    /**
-     * 关闭加载中
-     */
-    loadingHide(){
-        if(Mount.page) return;
-        this.maskHide();
     }
 
     /**
      * 打开遮罩层
      */
     mask(){
-        if ($('.mask').length == 0)
-            $('body').append('<div class="mask"></div>');
         let mask = $('.mask');
         mask.empty();
         if (mask.is(':hidden'))
@@ -111,14 +135,17 @@ let eadmin = class Eadmin{
      * 隐藏遮罩层
      */
     maskHide(){
-        let mask = $('.mask');
-        if ($('.window:visible').length > 0)
+        let [mask, window] = [
+            $('.mask'), 
+            $('.window:visible').length
+        ];
+        if (window > 0)
         {
             mask.css('z-index', '-=1');
         }
         else
         {
-            mask.hide();   
+            mask.css('z-index', 9998).hide();
         }
     }
 
@@ -126,15 +153,15 @@ let eadmin = class Eadmin{
      * 启动页
      */
     homepage(){
-        let that = this;
+        let _this = this;
         // 设置容器滚动区域高度
-        box.height(innerH() - $('header').outerHeight() - 40);
+        box.height(innerH() - $('header').outerHeight() - 30);
         // 如果配置了启动页，则默认加载启动页
         if(module.conf == undefined || 
             module.conf.homepage == undefined || 
             module.conf.homepage == '') return;
         // 加载动画
-        this.loading();
+        this.loadingProgress();
         // 判断默认主页
         let homepage = getRoute();
         if ( ! homepage)
@@ -145,8 +172,8 @@ let eadmin = class Eadmin{
         }
         else
         {
-            that.href = homepage;
-            that.currentHref = homepage;
+            _this.href = homepage;
+            _this.currentHref = homepage;
         }
         // 延迟
         if (module.conf.load_page_timeout != undefined && 
@@ -156,16 +183,15 @@ let eadmin = class Eadmin{
                 // 加载
                 box.
                 load(homepage, () => {
-                    that.load();
+                    _this.load();
                 });
             }, module.conf.load_page_timeout);
         }
         else
         {
             // 加载
-            box.
-            load(homepage, () => {
-                that.load();
+            box.load(homepage, () => {
+                _this.load();
             });
         }
     }
@@ -182,16 +208,14 @@ let eadmin = class Eadmin{
             console.log('没有找到id为container的容器div，请检查!');
             return false;
         }
-        let that = this;
-        $('body').on('click', 'a:not(.ql-action)', function(){
+        let _this = this;
+        $('body').on('click', 'a:not(.ql-action), button.href', function(){
             let v = {
                 this   : $(this),
                 subnav : $('.sub-nav')
             };
-            if (v.this.hasClass('active')) 
-                return false;
-            that.href = v.this.attr('href');
-            that.currentHref = that.href;
+            v.href = v.this.attr('href');
+            _this.href = _this.currentHref = v.href;
             // 一级导航
             if (v.this.hasClass('nav'))
             {
@@ -208,9 +232,7 @@ let eadmin = class Eadmin{
                         console.log('当前分类既没有子分类，也没有指定链接');
                         return false;
                     }
-                    $('.sub-nav div').
-                        eq(1).
-                        empty();
+                    $('.sub-nav div').eq(1).empty();
                 }
                 else
                 {
@@ -225,7 +247,10 @@ let eadmin = class Eadmin{
                         }
                         else
                         {
-                            v.navHtml += ` class="nav-sub">`;
+                            v.navHtml += ` class="nav-sub"`;
+                            if (v.sub[id].container != undefined)
+                                navHtml += ` data-container="${v.sub[id].container}"`;
+                            v.navHtml += `>`;
                         }
                         v.navHtml += `<li>`;
                         if (v.sub[id].icon != undefined && v.sub[id].icon != '')
@@ -258,14 +283,16 @@ let eadmin = class Eadmin{
                 store('sub_nav_id', v.this.data('id').toString());
             }
             // 阻止框架内跳转
-            if (that.href == 'javascript:;' || 
+            if (_this.href == 'javascript:;' || 
                 v.this.data('native') != undefined) return true;
             // 设置URL
-            setRoute(that.href);
-            let storeKey = md5(that.href);
+            setRoute(_this.href);
+            let storeKey = md5(_this.href);
             store.remove(storeKey + '_page');
             // 重载
-            that.refresh();
+            let container = v.this.data('container');
+            container = container ? '#' + container : false;
+            _this.refresh(container);
             return false;
         });
     }
@@ -273,21 +300,22 @@ let eadmin = class Eadmin{
     /**
      * 刷新当前页面
      */
-    refresh(){
-        let that = this;
-        box.empty();
-        // loading
-        that.loading();
+    refresh(container = false){
+        let _this = this;
+        let _box  = ! container ? box : $(container);
+        _box.empty();
+        // 加载动画
+        this.loadingProgress();
+        // 需要销毁的元素
         let destroy = [
             '.window',
             '.datepicker',
             '.citypicker',
-            '.dz-hidden-input'
+            '.dz-hidden-input',
+            '.dropdown:not(.fixed)'
         ];
         for (let i in destroy)
-        {
             $(destroy[i]).remove();
-        }
         if (Mount.dropzone.length > 0)
         {
             _.each(Mount.dropzone, (d) => {
@@ -296,17 +324,52 @@ let eadmin = class Eadmin{
             Mount.dropzone = [];
         }
         Mount.window = null;
-        Mount.data   = null;
+        // 清理定时器
+        if (Mount.timeout.length > 0)
+        {
+            _.each(Mount.timeout, (val) => {
+                clearTimeout(val);
+            });
+        }
+        if (Mount.interval.length > 0)
+        {
+            _.each(Mount.interval, (val) => {
+                clearInterval(val);
+            });
+        }
         // 加载
         setTimeout(() => {
             Method = {};
-            that.href = that.href == '' ? module.conf.homepage : that.href;
+            _this.href = _this.href == '' ? module.conf.homepage : _this.href;
             $(window).off();
-            box.
-                off().
-                load(that.href, () => {
-                    that.load();
+            _box.off().
+            load(_this.href, () => {
+                _this.load();
+                if (container != '#right-frame')
+                    return;
+                let contents = `<div class="contents"><ul>`;
+                _box.find('h2').
+                each(function(i){
+                    $(this).attr('id', 'h2-'+ i);
+                    let h2 = $(this).html();;
+                    contents += `<li>${h2}</li>`;
                 });
+                contents += `</ul></div>`;
+                _box.append(contents);
+                // 代码高亮
+                $('code').each(function(){
+                    let v  = {this : $(this)};
+                    v.html = v.this.html();
+                    v.html = v.html.replace(/[<>]/g, (c) => {
+                        return {'<':'&lt;', '>':'&gt;'}[c];
+                    });
+                    v.html = v.html.replace(/^\s+|\s+$/g, '');
+                    v.this.html(v.html);
+                    if ( ! v.this.hasClass('hljs')) return true;
+                    hljs.highlightBlock(v.this[0]);
+                    hljs.lineNumbersBlock(v.this[0]);
+                });
+            });
         }, module.conf.load_page_timeout);
     }
 
@@ -319,7 +382,6 @@ let eadmin = class Eadmin{
         // 私有函数
         let create = (data) => {
             let navHtml = '<ul>';
-            let mobileNavHtml = '<ul>';
             // 遍历主导航数据
             let i = 0;
             let main_nav_id = store('main_nav_id');
@@ -329,37 +391,32 @@ let eadmin = class Eadmin{
                 let act  = '';
                 if (main_nav_id == undefined)
                 {
-                    if (i == 0) act = ' active';
+                    if (i == 0) 
+                        act = ' active';
                 }
                 else
                 {
-                    if (id == main_nav_id) act = ' active';
+                    if (id == main_nav_id) 
+                        act = ' active';
                 }
                 navHtml += `<a href="${href}"`;
-                mobileNavHtml += `<a href="${href}"`;
                 if (data[id].native == undefined)
                 {
-                    navHtml += `class="nav${act}" data-id="${id}">`;
-                    mobileNavHtml += `class="nav${act}" data-id="${id}">`;
+                    navHtml += `class="nav${act}" data-id="${id}"`;
+                    if (data[id].container != undefined)
+                        navHtml += ` data-container="${data[id].container}"`;
+                    navHtml += `>`;
                 }
                 else
                 {
-                    navHtml += ` data-native="1" target="_blank">`;
-                    mobileNavHtml += ` data-native="1" target="_blank">`;
+                    navHtml += ` data-native target="_blank">`;
                 }
                 navHtml += `<li>${data[id].name}<div class="nav-slider"></div></li></a>`;
-                mobileNavHtml += `<li>${data[id].name}`;
-                if (data[id].sub != undefined)
-                    mobileNavHtml += `<i class="ri-arrow-down-s-line"></i>`;
-                mobileNavHtml += `</li></a>`;
                 i++;
             }
             navHtml += '</ul>';
-            mobileNavHtml += '</ul>';
             // 主导航交互
             $('.nav').html(navHtml);
-            // 手机端
-            $('.mobile-nav').html(mobileNavHtml);
             // 二级导航默认显示处理
             if (main_nav_id == undefined) return;
             let sub = window.nav[main_nav_id].sub;
@@ -398,7 +455,7 @@ let eadmin = class Eadmin{
         // 实体文件数据源
         if (module.conf.nav_data_source == 'local')
         {
-            loader.load(_ROOTPATH + 'data/nav.js', () => {
+            loader.load(_ROOTPATH + 'js/data/nav.js', () => {
                 create(window.nav);
             });
             return;
@@ -409,13 +466,12 @@ let eadmin = class Eadmin{
             console.log('导航接口地址不能为空，导航创建失败');
             return;
         }
-        axios.get(module.conf.nav_api_url).
-        then((response) => {
-            window.nav = response.data;
-            create(response.data);
-        }).
-        catch((error) => {
-            console.log(error);
+        this.get({
+            url  : module.conf.nav_api_url,
+            then : (data) => {
+                window.nav = data;
+                create(data);
+            }
         });
     }
 
@@ -428,32 +484,32 @@ let eadmin = class Eadmin{
             this.boxScroll.destroy();
             this.boxScroll = null;
         }
-        this.loadingHide();
+        this.loadingProgress(0);
+        // 默认图
+        defaultImg(box);
+        // 块
+        block(box);
         // 表单渲染
         this.form();
         // 按钮渲染
         Button.run(box);
-        // 状态
-        Status.run(box);
         // 标签
         Tag.run(box);
-        // 进度条
-        Progress.run(box);
         // 监听滚动
         this.onscroll();
         // 滚动条处理
         let scroll = $('body').find('.iscroll');
         if(scroll.length > 0)
         {
-            let that = this;
+            let _this = this;
             scroll.
             each(function(){
-                that.scroll($(this)[0]);
+                _this.scroll($(this)[0]);
             });
         }
         this.boxScroll = this.scroll(box[0]);
-        // 块
-        block(box);
+        // 进度条
+        Progress.run(box);
     }
 
     /**
@@ -501,8 +557,8 @@ let eadmin = class Eadmin{
     /**
      * 弹窗
      */
-    window(dom, param, bind = true){
-        new Window(dom, param, bind);
+    window(dom, param){
+        new Window(dom, param);
         return this;
     }
 
@@ -542,8 +598,7 @@ let eadmin = class Eadmin{
      * 表格
      */
     table(dom, param){
-        new Table(dom, param);
-        return this;
+        return new Table(dom, param);
     }
 
     /**
@@ -595,6 +650,16 @@ let eadmin = class Eadmin{
     }
 
     /**
+     * 下拉菜单
+     * @param {*} dom 
+     * @param {*} param 
+     */
+    dropdown(dom, param){
+        new Dropdown(dom, param);
+        return this;
+    }
+
+    /**
      * 模版
      */
     template(dom, data, callback){
@@ -619,19 +684,232 @@ let eadmin = class Eadmin{
     }
 
     /**
+     * 通用获取GET参数
+     */
+    request(name = ''){
+        // 获取参数原始值
+        if (dom.length == 0)
+        {
+            return {};
+        }
+        let val = dom.val();
+        if (val == '')
+        {
+            return {};
+        }
+        val = JSON.parse(val);
+        if (name == '')
+        {
+            return val;
+        }
+        return val[name];
+    }
+
+    /**
      * 滚动条滚动响应
      */
     onscroll(){
         let hide = [
             '.datepicker',
-            '.citypicker'
+            '.citypicker',
+            '.dropdown'
         ];
         box.on('scroll', () => {
             if ( ! clear) return;
             for (let i in hide)
                 $(hide[i]).hide();
-            $(':focus').blur();
+            $(':focus').trigger('blur');
             clear = false;
+        });
+    }
+
+    /**
+     * 发送GET请求
+     */
+    get(param = {})
+    {
+        if (param.url == undefined)
+        {
+            console.log('请指定接口地址');
+            return;
+        }
+        if (param.param == undefined)
+            param.param = {};
+        axios.get(param.url, {
+            params : param.param
+        }).
+        then((response) => {
+            let data;
+            if (_.isFunction(module.conf.http.response))
+                data = module.conf.http.response(response.data);
+            else
+                data = response.data;
+            // 没有执行码
+            if (data[module.conf.http.code_field] == undefined)
+            {
+                console.log('接口返回结果中没有找到定义的code码字段');
+                return;
+            }
+            let msg = '';
+            if (data[module.conf.http.msg_field] != undefined)
+                msg = data[module.conf.http.msg_field];
+            // 执行失败
+            if (data[module.conf.http.code_field] != module.conf.http.code_success)
+            {
+                if (msg == '') msg = '操作执行失败';
+                Message.error({
+                    content : msg
+                });
+                if (_.isFunction(param.error))
+                    param.error();
+                return;
+            }
+            if (param.popup !== true)
+            {
+                if (_.isFunction(param.then))
+                    param.then(data[module.conf.http.data_field]);
+                return;
+            }
+            msg = msg || '操作执行成功';
+            // 提示
+            let conf = {content : msg};
+            if (_.isFunction(param.then))
+            {
+                conf.callback = () => {
+                    param.then(data);
+                };
+            }
+            // 自定义提醒模式
+            if (data.remind == undefined)
+            {
+                conf.submit = conf.callback;
+                Popup.success(conf);
+                return;
+            }
+            if (data.remind == 'no')
+            {
+                if (conf.callback != undefined) 
+                    conf.callback();
+                return;
+            }
+            switch (data.remind)
+            {
+                case 'notice':
+                    Notice.success({
+                        title : '消息提醒',
+                        desc  : msg
+                    });
+                    if (conf.callback != undefined) 
+                        conf.callback();
+                break;
+                case 'message':
+                    Message.success({
+                        content : msg
+                    });
+                    if (conf.callback != undefined) 
+                        conf.callback();
+                break;
+                case 'popup':
+                    conf.submit = conf.callback;
+                    Popup.success(conf);
+                break;
+            }
+        }).
+        catch((e) => {console.log(e);});
+    }
+
+    /**
+     * 发送POST请求
+     */
+    post(param = {})
+    {
+        if (param.url == undefined)
+        {
+            console.log('请指定接口地址');
+            return;
+        }
+        if (param.form == undefined)
+        {
+            console.log('请指定需要提交的POST数据');
+            return;
+        }
+        axios.post(param.url, param.form, module.conf.http.headers).
+        then((response) => {
+            let data;
+            if (_.isFunction(module.conf.http.response))
+                data = module.conf.http.response(response.data);
+            else
+                data = response.data;
+            if (data[module.conf.http.code_field] == undefined)
+            {
+                console.log('接口返回结果中没有找到定义的code码字段');
+                return;
+            }
+            let msg = '';
+            if (data[module.conf.http.msg_field] != undefined)
+                msg = data[module.conf.http.msg_field];
+            // 执行失败
+            if (data[module.conf.http.code_field] != module.conf.http.code_success)
+            {
+                msg = msg || '操作执行失败';
+                Message.error({
+                    content : msg
+                });
+                if (_.isFunction(param.error))
+                    param.error(data);
+                return;
+            }
+            if (_.isFunction(param.close))
+                param.close();
+            msg = msg || '操作执行成功';
+            // 提示
+            let conf = {content : msg};
+            if (_.isFunction(param.then))
+            {
+                conf.callback = () => {
+                    param.then(data);
+                };
+            }
+            // 自定义提醒模式
+            if (data.remind == undefined)
+            {
+                conf.submit = conf.callback;
+                Popup.success(conf);
+                return;
+            }
+            if (data.remind == 'no')
+            {
+                if (conf.callback != undefined) 
+                    conf.callback();
+                return;
+            }
+            switch (data.remind)
+            {
+                case 'notice':
+                    Notice.success({
+                        title : '消息提醒',
+                        desc  : msg
+                    });
+                    if (conf.callback != undefined) 
+                        conf.callback();
+                break;
+                case 'message':
+                    Message.success({
+                        content : msg
+                    });
+                    if (conf.callback != undefined) 
+                        conf.callback();
+                break;
+                case 'popup':
+                    conf.submit = conf.callback;
+                    Popup.success(conf);
+                break;
+            }
+        }).
+        catch((error) => {
+            console.log(error);
+            if (_.isFunction(param.error))
+                param.error();
         });
     }
 
@@ -641,6 +919,8 @@ let eadmin = class Eadmin{
 let Eadmin = new eadmin();
 
 loader.ready(() => {
+    // 识别配色
+    Mount.skin = body.css('background-color').indexOf(245) == -1 ? 'dark' : 'light';
     // 全局图表配置
     if (module.framework.chart != undefined)
     {
@@ -654,7 +934,7 @@ loader.ready(() => {
             axios.defaults[key] = val;
         });
     }
-    // 上传处理
+    // 全局上传处理
     if(module.plugin.indexOf('dropzone') != -1)
         Dropzone.autoDiscover = false;
     // 导航
@@ -662,38 +942,31 @@ loader.ready(() => {
     // 主界面
     Eadmin.homepage();
     // TIPS
-    if(module.lib.indexOf('tips') != -1)
-    {
-        Tips.run();
-    }
+    Tips.run();
     // POPUP
-    if(module.lib.indexOf('popup') != -1)
-        Eadmin.popup = Popup;
+    Eadmin.popup = Popup;
     // MESSAGE
-    if(module.lib.indexOf('message') != -1)
-        Eadmin.message = Message;
+    Eadmin.message = Message;
     // NOTICE
-    if(module.lib.indexOf('notice') != -1)
-        Eadmin.notice = Notice;
+    Eadmin.notice = Notice;
     // BUTTON
-    if(module.lib.indexOf('button') != -1)
-    {
-        Eadmin.button = Button;
-        Button.event();
-    }
+    Eadmin.button = Button;
+    Button.event();
     // 表单事件
-    if(module.lib.indexOf('form') != -1)
-        Form.event();
+    Form.event();
     // 表单验证
-    if(module.lib.indexOf('validate') != -1)
-        Validate.run();
+    Validate.run();
+    // 图片查看器
+    Imageview.run();
     // 点击遮罩关闭弹窗
     if ( ! module.conf.window_close_by_shade) return;
     $('.mask').on('click', () => {
-        if ($('.window').length == 0) return;
+        if ($('.window').length == 0) 
+            return;
+        // 如果有弹出框则不做动作
+        if ($('.popup:visible').length > 0)
+            return;
         let window = $('.window:last');
-        window.
-            children('.window-close').
-            trigger('click');
+        window.children('.window-close').trigger('click');
     });
 });

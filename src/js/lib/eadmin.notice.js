@@ -51,65 +51,64 @@ class Notice{
 	 */
 	static _createHtml(param = {}){
 		// 私有变量
-		let _var = {
+		let v = {
 			html : `<div class="notice animated faster fadeInRight">`,
 			ml   : '',
 			iconTop : ''
 		};
-		let _func = {
+		let func = {
 			close : (box) => {
-				box.
-					addClass('fadeOutRight').
-					on('animationend', () => {
-						box.remove();
-						if (param.callback != undefined && 
-							_.isFunction(param.callback))
-							param.callback();
-					});
+				box.addClass('fadeOutRight').
+				on('animationend', () => {
+					box.remove();
+					if (param.callback != undefined && 
+						_.isFunction(param.callback))
+						param.callback();
+				});
 			}
 		};
-		if (param.desc == undefined || param.desc == '')
+		if (param.desc == undefined || 
+			param.desc == '')
 		{
-			_var.iconTop = ' style="top:12px;"';
+			v.iconTop = ' style="top:12px;"';
 		}
 		if (param.icon != null)
 		{
-			_var.html += `<i class="title-icon ${param.icon}"${_var.iconTop}></i>`;
-			_var.ml = ' style="margin-left:32px"';
+			v.html += `<i class="title-icon ${param.icon}"${v.iconTop}></i>`;
+			v.ml = ' style="margin-left:32px"';
 		}
-		_var.html += `<i class="ri-close-line close"></i>
-			<div class="box"${_var.ml}>
+		v.html += `<i class="ri-close-line close"></i>
+			<div class="box"${v.ml}>
 				<div class="notice-title">${param.title}</div>`;
 		if (param.desc != undefined)
-			_var.html += `<div class="desc">${param.desc}</div>`;
+			v.html += `<div class="desc">${param.desc}</div>`;
 		if (param.href != undefined && 
 			_.isArray(param.href))
 		{
-			for (let _i in param.href)
+			for (let i in param.href)
 			{
-				let native = param.href[_i].native != undefined ? ' data-native="1"' : '';
-				let target = param.href[_i].target != undefined ? ' target="' + param.href[_i].target + '"' : '';
-				_var.html += `<div class="href">
-					<a href="${param.href[_i].href}"${native}${target}>${param.href[_i].txt}</a>
+				let native = param.href[i].native != undefined ? ' data-native="1"' : '';
+				let target = param.href[i].target != undefined ? ' target="' + param.href[i].target + '"' : '';
+				v.html += `<div class="href">
+					<a href="${param.href[i].href}"${native}${target}>${param.href[i].txt}</a>
 				</div>`;
 			}
 		}
-		_var.html += `</div></div>`;
-		$('#notice').append(_var.html);
-		let _box = $('.notice:last');
+		v.html += `</div></div>`;
+		$('#notice').append(v.html);
+		let box = $('.notice:last');
 		// 移除
-		let _duration = (param.duration != undefined) ? 
+		let duration = (param.duration != undefined) ? 
 							param.duration : 
 							module.conf.notice_duration;
-		_box.
-		children('.close').
+		box.children('.close').
 		on('click', function(){
-			_func.close(_box);
+			func.close(box);
 		});
-		if (_duration == 0) return;
+		if (duration == 0) return;
 		setTimeout(() => {
-			_func.close(_box);
-		},  _duration * 1000);
+			func.close(box);
+		},  duration * 1000);
 	}
 	
 }

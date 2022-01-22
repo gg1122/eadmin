@@ -40,7 +40,9 @@ class Slider{
 				// 是否需要提示
 				tips 	 : '',
 				// 回调
-				change 	 : null
+				change 	 : null,
+				// 绑定隐藏域
+				bind     : null
 			};
 			// 配置参数
 			this.param = $.extend(_param, param);
@@ -66,12 +68,12 @@ class Slider{
 	 */
 	_create(){
 		// 私有方法，创建结构
-		let create = (dom) => {
+		let func = (dom) => {
 			// 添加默认样式
 			if ( ! dom.hasClass('slider')) 
 				dom.addClass('slider');
 			// 判断是否禁用
-			if (this.param.disabled) 
+			if (this.param.disabled)
 				dom.addClass('slider-disabled');
 			// 创建结构
 			let html = '', left;
@@ -84,8 +86,10 @@ class Slider{
 					html += `<div class="step" style="left: ${this.stepWidth * i}px;"></div>`;
 				left = (this.param.value / this.param.step) * this.stepWidth;
 				left -= 8;
-				if (left < 0) left = 0;
-				if (left > this.maxLeft) left = this.maxLeft;
+				if (left < 0) 
+					left = 0;
+				if (left > this.maxLeft) 
+					left = this.maxLeft;
 			}
 			else
 			{
@@ -95,27 +99,31 @@ class Slider{
 			}
 			// tips提示内容
 			let tips = this.param.value;
-			if (tips == 0) tips = this.param.min;
+			if (tips == 0) 
+				tips = this.param.min;
 			// 自定义TIPS处理
 			if (this.param.tips != '')
 				tips = _.replace(this.param.tips, '[val]', tips);
 			// 如果滑块为禁用状态，则增加tips-disabled的class
 			// 因为TIPS组件不会监听tips-disabled的事件
-			html += `<div class="slider-btn${this.param.disabled ? ' tips-disabled' : ''}" data-tips="${tips}" data-tips-offset="middle" 
-						data-tips-center="1" style="left:${left}px;">
+			html += `<div class="slider-btn${this.param.disabled ? ' tips-disabled' : ''}" data-tips="${tips}"
+						data-tips-center style="left:${left}px;">
 					</div>
 					<div class="slider-bar" style="width:${left + this.btnWidth}px;"></div>`;
+			// 隐藏域
+			if (this.param.bind != null)
+				html += `<input type="hidden" name="${this.param.bind}" value="${this.param.value}">`;
 			dom.html(html);
 		}
 		// 生成HTML结构
 		if (this.domCache.length == 1)
 		{
-			create(this.domCache);
+			func(this.domCache);
 		}
 		else
 		{
 			this.domCache.each(function(){
-				create($(this));
+				func($(this));
 			});
 		}
 	}
@@ -127,7 +135,7 @@ class Slider{
 		let that = this;
 		let left = 0;
 		// 事件处理
-		this.domCache.
+		that.domCache.
 		// 状态激活
 		on('mouseenter', '.slider-btn', function(){
 			$(this).data('active', 1);
@@ -138,9 +146,9 @@ class Slider{
 		}).
 		// 滑块按钮点击
 		on('mousedown', '.slider-btn', function(event){
+			let _this = $(this);
 			// 私有变量
 			let v = {
-				this : $(this),
 				clientX : null,
 				clientXClone : event.clientX,
 				// 定义当前移动是否在合法范围内
@@ -148,13 +156,13 @@ class Slider{
 				timer : null,
 				val   : 0
 			}
-			v.left = parseInt(v.this.css('left'));
-			v.bar  = v.this.next('.slider-bar');
+			v.left = parseInt(_this.css('left'));
+			v.bar  = _this.next('.slider-bar');
 			// 增加禁止CLASS，避免tips来回触发
-			v.this.addClass('tips-disabled');
+			_this.addClass('tips-disabled');
 			// 如果没有配置全局禁止选中文本，则处理禁止选中文本
 			// 避免在鼠标移动的过程中选中文本
-			if(selectEnabled) selectText(0);
+			if(selectEnabled) userselect(0);
 			// 可视区域内鼠标移动事件
 			$(document).bind('mousemove', (event) => {
 				// 当前鼠标X轴位置
@@ -186,12 +194,12 @@ class Slider{
 						v.val = data.val;
 						left  = data.left;
 					}
-					v.this.css('left', left);
+					_this.css('left', left);
 					v.bar.width(left + that.btnWidth);
 				}
 				else
 				{
-					v.this.css('left', left);
+					_this.css('left', left);
 					v.bar.width(left + that.btnWidth);
 					// 获取真实值
 					v.val  = that._val(left);
@@ -199,54 +207,53 @@ class Slider{
 				}
 				clearTimeout(v.timer);
 				// TIPS赋值
-				that._tips(v.val, v.this);
+				that._tips(v.val, _this);
 				// TIPS重置
-				Tips.reset(v.this, {
+				Tips.reset(_this, {
 					offset : 'middle'
 				});
 				// 回调
 				v.timer = setTimeout(() => {
-					if (that.param.change != null && _.isFunction(that.param.change))
-						that.param.change(v.val);			
+					if (that.param.change != null && 
+						_.isFunction(that.param.change))
+						that.param.change(v.val);
+					if (that.param.bind != null)
+						_this.next().next().val(v.val);
 				}, 400);
 			}).bind('mouseup', function(){
-				v.this.removeClass('tips-disabled');
+				_this.removeClass('tips-disabled');
 				// 销毁TIPS
-				if (v.this.data('active') == 0)
-					Tips.destory(v.this);
+				if (_this.data('active') == 0)
+					Tips.destory(_this);
 				// 移除事件
-				$(this).
-					unbind('mousemove').
-					unbind('mouseup');
+				$(this).unbind('mousemove').unbind('mouseup');
 			});
 		}).
 		// 还原
 		on('mouseup', '.slider-btn', function(){
 			// 如果没有配置全局禁止选中文本，则处理允许选中文本
-			if(selectEnabled) selectText(1);
+			if(selectEnabled) userselect(1);
 			// 设置这个值是表示当前滑块刚被移动过，防止click的重复触发
-			$(this).
-				parent().
-				data('btn', true);
+			$(this).parent().data('btn', true);
 		}).
 		// 点击选择位置
 		on('click', function(event){
+			let _this = $(this);
 			// 私有变量
 			let v = {
-				this : $(this),
-				val  : 0
+				val : 0
 			};
-			if (v.this.data('btn') == true)
+			if (_this.data('btn') == true)
 			{
-				v.this.data('btn', false);
+				_this.data('btn', false);
 				return;
 			}
 			left  = _.floor(event.clientX - that.offsetX);
 			left -= that.btnWidth / 2;
 			// 校验LEFT
 			left = that._checkLeft(left);
-			let btn = v.this.children('.slider-btn'),
-				bar = v.this.children('.slider-bar');
+			let btn = _this.children('.slider-btn'),
+				bar = _this.children('.slider-bar');
 			// 没有步长的处理
 			if (that.param.step == 0)
 			{

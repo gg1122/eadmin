@@ -17,11 +17,11 @@ class Popup{
 			title : '消息提示',
 			icon  : 'ri-error-warning-fill alert',
 			txt   : param.content,
-			btn   : '<button id="close" class="highlight middle">确定 (<em>3</em>)</button>'
+			btn   : '<button id="close" class="hl middle">确定 (<em>3</em>)</button>'
 		});
-		let _popup = $('.popup');
-		fadeIn(_popup);
-		this._countdown(_popup, param);
+		let popup = $('.popup');
+		fadeIn(popup);
+		this._countdown(popup, param);
 	}
 
 	/**
@@ -33,11 +33,11 @@ class Popup{
 			title : '操作成功',
 			icon  : 'ri-checkbox-circle-fill success',
 			txt   : param.content,
-			btn   : '<button id="close" class="highlight middle">确定 (<em>3</em>)</button>'
+			btn   : '<button id="close" class="hl middle">确定 (<em>3</em>)</button>'
 		});
-		let _popup = $('.popup');
-		fadeIn(_popup);
-		this._countdown(_popup, param);
+		let popup = $('.popup');
+		fadeIn(popup);
+		this._countdown(popup, param);
 	}
 
 	/**
@@ -49,11 +49,11 @@ class Popup{
 			title : '操作失败',
 			icon  : 'ri-close-circle-fill error',
 			txt   : param.content,
-			btn   : '<button id="close" class="highlight middle">确定 (<em>3</em>)</button>'
+			btn   : '<button id="close" class="hl middle">确定 (<em>3</em>)</button>'
 		});
-		let _popup = $('.popup');
-		fadeIn(_popup);
-		this._countdown(_popup, param);
+		let popup = $('.popup');
+		fadeIn(popup);
+		this._countdown(popup, param);
 	}
 
 	/**
@@ -65,28 +65,24 @@ class Popup{
 			title : '操作确认',
 			icon  : 'ri-question-fill confirm',
 			txt   : param.content,
-			btn   : `<button id="sure" class="highlight middle" style="margin-right:5px;">确定</button>
+			btn   : `<button id="sure" class="hl middle" style="margin-right:5px;">确定</button>
 					<button id="close" class="middle">取消</button>`
 		});
 		Eadmin.mask();
 		let popup = $('.popup');
 		fadeIn(popup);
-		popup.
-		find('#close').
+		popup.find('#close').
 		on('click', function(){
 			Eadmin.maskHide();
 			fadeOut(popup);
+			if (_.isFunction(param.cancel))
+				param.cancel();
 		});
-		popup.
-		find('#sure').
+		popup.find('#sure').
 		on('click', function(){
-			$(this).
-				html('执行中...').
-				attr('disabled', true);
-			if (_.isFunction(param.callback))
-			{
-				param.callback();
-			}
+			$(this).html('执行中...').attr('disabled', true);
+			if (_.isFunction(param.submit))
+				param.submit();
 		});
 	}
 
@@ -96,29 +92,29 @@ class Popup{
 	static _createHtml(param = {}){
 		if ($('.popup').length == 1)
 		{
-			let _popup = $('.popup');
-			if (_popup.is(':visible'))
-				_popup.hide();
-			let _var = {
-				title : _popup.children('.title'),
-				icon  : _popup.children('i'),
-				txt   : _popup.children('.txt'),
-				btn   : _popup.children('.btn')
+			let popup = $('.popup');
+			if (popup.is(':visible'))
+				popup.hide();
+			let v = {
+				title : popup.children('.title'),
+				icon  : popup.children('i'),
+				txt   : popup.children('.txt'),
+				btn   : popup.children('.btn')
 			};
-			_var.title.html(param.title);
-			_var.icon.attr('class', param.icon);
-			_var.txt.html(param.txt);
-			_var.btn.html(param.btn);
+			v.title.html(param.title);
+			v.icon.attr('class', param.icon);
+			v.txt.html(param.txt);
+			v.btn.html(param.btn);
 		}
 		else
 		{
-			let _html = `<div class="popup animated faster dn">
+			let html = `<div class="popup animated faster dn">
 				<span class="title">${param.title}</span>
 				<i class="${param.icon}"></i>
 				<span class="txt">${param.txt}</span>
 				<div class="btn">${param.btn}</div>
 			</div>`;
-			$('body').append(_html);
+			$('body').append(html);
 		}
 		let window = $('.window:visible').length;
 		if (window > 0)
@@ -135,8 +131,8 @@ class Popup{
 				fadeOut(popup);
 				clearInterval(this.Timer);
 				this.Timer = null;
-				if (_.isFunction(param.callback))
-					param.callback();
+				if (_.isFunction(param.submit))
+					param.submit();
 				if (param.refresh === true)
 					Eadmin.refresh();
 			}
@@ -154,8 +150,7 @@ class Popup{
 				find('em').
 				html(second);
 		}, 1000);
-		popup.
-		find('#close').
+		popup.find('#close').
 		on('click', () => {
 			func.close();
 		});
